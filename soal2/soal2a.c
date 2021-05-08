@@ -40,8 +40,8 @@ void *mult_matrix(void *arg){
 
 int main(){
 
-    key_t key = 1234;
-    int shmid = shmget(key,sizeof(int[4][6]),0666|IPC_CREAT); 
+    key_t key = 1112;
+    int shmid = shmget(key, sizeof(int[4][6]), 0666 | IPC_CREAT); 
     result_matrix = shmat(shmid,NULL,0);  
 
 	int matrix_a[4][3] = {
@@ -49,7 +49,8 @@ int main(){
 		{1, 2, 1},
 		{3, 3, 1},
 		{0, 2, 0}
-	};
+	}; 
+    
 	int matrix_b[3][6] ={
 		{1, 2, 0, 3, 2, 2},
 		{1, 2, 2, 3, 2, 3},
