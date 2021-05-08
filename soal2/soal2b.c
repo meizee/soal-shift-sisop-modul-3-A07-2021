@@ -44,7 +44,7 @@ void *mult_matrix(void *arg){
                 if(b_glob[i][j] > a_glob[i][j]){
                     output[i][j] = factorial1(a_glob[i][j]);
                 }
-                
+
                 //If 0 -> 0
                 if(a_glob[i][j] == 0 || b_glob[i][j] == 0){
                     output[i][j] = 0;
@@ -71,20 +71,20 @@ int main(){
 	};
 
     printf("Matrix a:\n");
-    for(int i=0; i<4; i++) {
-        for(int j=0; j<6; j++){
-            //printf("%4d ", result_matrix[i][j]);
-            a_glob[i][j] = result_matrix[i][j];
-            printf("%4d ", a_glob[i][j]);
+    for(int k=0; k<4; k++) {
+        for(int l=0; l<6; l++){
+            //printf("%4d ", result_matrix[k][l]);
+            a_glob[k][l] = result_matrix[k][l];
+            printf("%4d ", a_glob[k][l]);
         }
         printf("\n");
     }
 
     printf("\nMatrix b:\n");
-    for(int i=0; i<4; i++) {
-        for(int j=0; j<6; j++){
-            b_glob[i][j] = matrix_b[i][j];
-            printf("%4d ", b_glob[i][j]);
+    for(int k=0; k<4; k++) {
+        for(int l=0; l<6; l++){
+            b_glob[k][l] = matrix_b[k][l];
+            printf("%4d ", b_glob[k][l]);
         }
         printf("\n");
     }
