@@ -7,19 +7,19 @@
 #include <sys/shm.h> 
 
 pthread_t tid[24];
-int a_glob[4][6], b_glob[4][6];
-int output[4][6];
-int (*result_matrix)[6];
+long long  int a_glob[4][6], b_glob[4][6];
+long long int output[4][6];
+long long int (*result_matrix)[6];
 
-int factorial2(int m, int n){
-    int res=1;
+long long int factorial2(int m, int n){
+    long long int res=1;
     for(int j=m; j>n; j--){
         res = res*j;
     }
     return res;
 }
 
-int factorial1(int n){
+long long int factorial1(int n){
     if(n>=1){
         return n*factorial1(n-1);
     }
@@ -63,11 +63,11 @@ int main(){
     int shmid = shmget(key,sizeof(int[4][6]), 0666 | IPC_CREAT);  
     result_matrix =  shmat(shmid,NULL,0);  
 
-	int matrix_b[4][6] ={
-		{1, 2, 0, 3, 2, 2},
-		{1, 2, 2, 3, 2, 3},
-        {0, 3, 2, 1, 1, 0},
-        {1, 2, 2, 3, 2, 3}
+	long long int matrix_b[4][6] = { 
+        {14, 2, 3, 8, 8, 10},
+        {7, 4, 8, 5, 14, 9},
+        {9, 2, 13, 5, 11, 2},
+        {8, 7, 10, 4, 10, 8}
 	};
 
     printf("Matrix a:\n");
@@ -75,7 +75,7 @@ int main(){
         for(int l=0; l<6; l++){
             //printf("%4d ", result_matrix[k][l]);
             a_glob[k][l] = result_matrix[k][l];
-            printf("%4d ", a_glob[k][l]);
+            printf("%4lld ", a_glob[k][l]);
         }
         printf("\n");
     }
@@ -84,7 +84,7 @@ int main(){
     for(int k=0; k<4; k++) {
         for(int l=0; l<6; l++){
             b_glob[k][l] = matrix_b[k][l];
-            printf("%4d ", b_glob[k][l]);
+            printf("%lld ", b_glob[k][l]);
         }
         printf("\n");
     }
@@ -105,7 +105,7 @@ int main(){
     for(int i=0; i<4; i++){
         for(int j=0; j<6; j++)
         {
-            printf("%4d ", output[i][j]);
+            printf("%4lld ", output[i][j]);
         }
         printf("\n");
     }

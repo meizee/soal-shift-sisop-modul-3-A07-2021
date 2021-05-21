@@ -7,8 +7,8 @@
 #include <sys/shm.h> 
 
 pthread_t tid[4];
-int a_glob[4][3], b_glob[3][6];
-int (*result_matrix)[6];
+long long int a_glob[4][3], b_glob[3][6];
+long long int (*result_matrix)[6];
 
 void *mult_matrix(void *arg){
     pthread_t id = pthread_self();
@@ -42,26 +42,27 @@ int main(){
 
     key_t key = 1112;
     int shmid = shmget(key, sizeof(int[4][6]), 0666 | IPC_CREAT); 
-    result_matrix = shmat(shmid,NULL,0);  
+    result_matrix = shmat(shmid,NULL,0);
+    //long long int matrix_b[3][6], matrix_a[4][3];  
 
-	int matrix_a[4][3] = {
-		{3, 1, 2},
-		{1, 2, 1},
-		{3, 3, 1},
-		{0, 2, 0}
+	long long int matrix_a[4][3] = {
+        {4, 1, 4},
+        {2, 1, 3},
+        {4, 2, 2},
+        {1, 1, 4}
 	}; 
     
-	int matrix_b[3][6] ={
-		{1, 2, 0, 3, 2, 2},
-		{1, 2, 2, 3, 2, 3},
-        {0, 3, 2, 1, 1, 0}
+	long long int matrix_b[3][6] ={
+        {2, 1, 3, 2, 0, 3},
+        {1, 4, 4, 0, 0, 2},
+        {1, 1, 0, 1, 2, 1}
 	};
 
     printf("Matrix a:\n");
     for(int i=0; i<4; i++) {
         for(int j=0; j<3; j++){
             a_glob[i][j] = matrix_a[i][j];
-            printf("%4d ", a_glob[i][j]);
+            printf("%4lld ", a_glob[i][j]);
         }
         printf("\n");
     }
@@ -70,7 +71,7 @@ int main(){
     for(int i=0; i<3; i++) {
         for(int j=0; j<6; j++){
             b_glob[i][j] = matrix_b[i][j];
-            printf("%4d ", b_glob[i][j]);
+            printf("%4lld ", b_glob[i][j]);
         }
         printf("\n");
     }
@@ -89,7 +90,7 @@ int main(){
     for(int i=0; i<4; i++){
         for(int j=0; j<6; j++)
         {
-            printf("%4d ", result_matrix[i][j]);
+            printf("%4lld ", result_matrix[i][j]);
         }
         printf("\n");
     }
