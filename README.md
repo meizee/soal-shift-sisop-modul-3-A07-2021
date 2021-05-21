@@ -11,7 +11,7 @@ Keverk adalah orang yang cukup ambisius dan terkenal di angkatannya. Sebelum dia
 Di dalam proyek itu, Keverk diminta: 
 ## 1A
 Pada saat client tersambung dengan server, terdapat dua pilihan pertama, yaitu register dan login. Jika memilih register, client akan diminta input id dan passwordnya untuk dikirimkan ke server. User juga dapat melakukan login. Login berhasil jika id dan password yang dikirim dari aplikasi client sesuai dengan list akun yang ada didalam aplikasi server. Sistem ini juga dapat menerima multi-connections. Koneksi terhitung ketika aplikasi client tersambung dengan server. Jika terdapat 2 koneksi atau lebih maka harus menunggu sampai client pertama keluar untuk bisa melakukan login dan mengakses aplikasinya. Keverk menginginkan lokasi penyimpanan id dan password pada file bernama `akun.txt` dengan format :
-# akun.txt`
+### akun.txt`
 ```
 id:password
 id2:password2
@@ -21,7 +21,7 @@ Sistem memiliki sebuah database yang bernama files.tsv. Isi dari files.tsv ini a
 
 ## 1 C
 Keverk juga diminta membuat fitur agar client dapat menambah file baru ke dalam server. Direktori FILES memiliki struktur direktori di bawah ini : 
-# Direktori FILES
+### Direktori FILES
 ```
 File1.ekstensi
 File2.ekstensi
@@ -83,7 +83,7 @@ find TEMP
 ```
 ## 1H
 Dikarenakan Keverk waspada dengan pertambahan dan penghapusan file di server, maka Keverk membuat suatu log untuk server yang bernama running.log. Contoh isi dari log ini adalah
-# running.log
+### running.log
 ```
 Tambah : File1.ektensi (id:pass)
 Hapus : File2.ektensi (id:pass)
