@@ -478,3 +478,258 @@ else{
 
 #### **Screenshot:**
 ![2c](Screenshot/2c.jpg)
+
+
+
+
+## **3. Ayub Mengkategorikan File**
+
+> Source Code  **[soal3.c](https://github.com/hasnarof/soal-shift-sisop-modul-2-A07-2021/blob/main/soal3/soal3.c)**
+
+Program dapat:
+1. Program dapat menerima argumen `-f` untuk mengkategorikan file.
+`cmd$ ./soal3 -f path/to/file1.jpg path/to/file2.c path/to/file3.zip`
+2. Program dapat menerima argumen `-d` untuk mengkategorikan file dalam directory.
+`$ ./soal3 -d /path/to/directory/`
+3. Program dapat menerim argumen `*` untuk mengkategorikan file yang berada pada working directory.
+`$ ./soal3 \*`
+
+```c
+#include <ctype.h>
+#include <dirent.h>
+#include <limits.h>
+#include <pthread.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
+char listFile[2048][PATH_MAX];
+
+bool isExistAndRegFile();
+void *pindahFile();
+int listFilesFromDirectory();
+
+int main(int argc, char *argv[]) {
+    if (argc < 2) {
+        printf("Butuh argumen.\n");
+        exit(1);
+        return 0;
+    }
+```
+Agar program selalu menerima argumen.
+```c
+
+    char pathAwal[PATH_MAX];
+```
+`pathAwal` adalah working directory.
+```c
+
+    if (strcmp(argv[1], "*") == 0) {
+        if (getcwd(pathAwal, sizeof(pathAwal)) == NULL) {
+            perror("getcwd() error");
+            return 0;
+        }
+```
+Jika argumen program adalah `*`. Cek apakah ada string path working directory.
+```c
+    } else if (strcmp(argv[1], "-f") == 0) {
+        if (argc < 3) {
+            printf("Butuh argumen minimal 1 path menuju file.\n");
+            return 0;
+        }
+
+        pthread_t tid[argc - 2];
+
+        for (int i = 2; i < argc; i++) {
+            pthread_create(&(tid[i - 2]), NULL, pindahFile, (void *)argv[i]);
+        }
+
+        for (int i = 0; i < argc - 2; i++) {
+            int isBerhasilJoin;
+            void *ptr;
+            pthread_join(tid[i], &ptr);
+            isBerhasilJoin = (int)ptr;
+
+            if (isBerhasilJoin) {
+                printf("File %d : Berhasil Dikategorikan\n", i + 1);
+            } else {
+                printf("File %d : Sad, gagal :(\n", i + 1);
+            }
+        }
+
+        return 0;
+```
+Jika argumen adalah `-f`. Di sini ada cegatan argumen. Selain itu juga membuat thread, 1 thread untuk 1 file. Kemudian thread dijoin agar thread **main** tidak selesai lebih dahulu (jika **main** selesai, maka proses main akan selesai dan thread lain tidak akan berjalan).
+```c
+    } else if (strcmp(argv[1], "-d") == 0) {
+        if (argc == 3) {
+            strcpy(pathAwal, argv[2]);           
+        } else {
+            printf("Argumen hanya 1 untuk direktori.\n");
+            return 0;
+        }
+```
+Cegatan argumen untuk argumen `-d`.
+```c
+    } else {
+        printf("Argumen tidak valid.\n");
+    }
+
+    int jumlahFile = 0;
+    if (!listFilesFromDirectory(pathAwal, &jumlahFile)) {
+        printf("Yah, gagal disimpan :(\n");
+        return 0;
+    }
+
+    pthread_t tid[jumlahFile];
+    for (int i = 0; i < jumlahFile; i++) {
+        pthread_create(&(tid[i]), NULL, pindahFile, (void *)listFile[i]);
+    }
+
+    for (int i = 0; i < jumlahFile; i++) {
+        void *ptr;
+        pthread_join(tid[i], &ptr);
+    }
+
+    if (strcmp(argv[1], "-d") == 0) {
+        printf("Direktori sukses disimpan!\n");
+    }
+
+    return 0;
+}
+```
+Untuk join thread untuk argumen `-d` dan `*`. Menggunakan fungsi `listFilesFromDirectory()` untuk mendapatkan list path file-file dalam direktori secara rekursif. List path file disimpan pada array global `listFile[]`.
+```c
+
+void getFileExtension(char *namaFile, char *returnExten) {
+    char *ext = strchr(namaFile, '.');
+    if (ext == NULL) {
+        strcpy(returnExten, "Unknown");
+    } else if (ext == namaFile) {
+        strcpy(returnExten, "Hidden");
+    } else {
+        strcpy(returnExten, ext + 1);
+    }
+}
+```
+Untuk mendapatkan extension suatu file.
+```c
+
+bool isExistAndRegFile(char *pathAwal) {
+    struct stat bf;
+    int exist = stat(pathAwal, &bf);
+    if (exist == 0) {
+        if (S_ISREG(bf.st_mode)) {
+            return true;
+        }
+        else {
+            return false;
+        }
+    } else {
+        return false;
+    }
+}
+```
+Untuk mengecek apakah suatu file ada dan merupakan file reguler.
+```c
+
+void *pindahFile(void *arg) {
+    char pathAwal[PATH_MAX];
+    strcpy(pathAwal, (char *)arg);
+
+    if (isExistAndRegFile(pathAwal)) {
+
+        const char *p = "/";
+        char *a, *b;
+        char full_path[PATH_MAX];
+        strcpy(full_path, (char *)arg);
+
+        char namaFile[100];
+
+        for (a = strtok_r(full_path, p, &b); a != NULL; a = strtok_r(NULL, p, &b)) {
+            memset(namaFile, 0, sizeof(namaFile));
+            strcpy(namaFile, a);
+        }
+```
+Fungsi untuk memindahkan file ke folder sesuai ekstensi. Jika file tersebut ada dan merupakan reguler, maka lanjutkan pindah file. Pertama adalah memisahkan path menggunakan `strtok` berdasarkan tanda `/` pada path filenya. Kemudian`memset` 0 dan `strcpy` selama belum null. Karena pasti nama file ada di paling ujung path, ambil yang paling terakhir saja.
+```c
+
+        char ext[PATH_MAX];
+        getFileExtension(namaFile, ext);
+
+        if (strcmp(ext, "Hidden") != 0 && strcmp(ext, "Unknown") != 0) {
+            for (int i = 0; i < strlen(ext); i++) {
+                ext[i] = tolower(ext[i]);
+            }
+        }
+```
+Mengambil ekstensi dari suatu file, kemudian di cek jika tidak *hidden* dan *unknown* maka ubah string `ext` menjadi lowercase agar tidak ada dua folder ekstensi yaitu uppercase dan lowercase.
+```c
+
+        char cwd[PATH_MAX];
+        if (getcwd(cwd, sizeof(cwd)) == NULL) {
+            perror("getcwd() error");
+            return (void *)0;
+        }
+
+        char destinationDir[PATH_MAX];
+        sprintf(destinationDir, "%s/%s", cwd, ext);
+        mkdir(destinationDir, 0777);
+
+        char destination[PATH_MAX];
+        sprintf(destination, "%s/%s/%s", cwd, ext, namaFile);
+        rename(pathAwal, destination);
+        return (void *)1;
+    }
+
+    else {
+        return (void *)0;
+    }
+}
+```
+Kemudian membuat (**mkdir**) direktori ekstensi tujuan dengan menggabungkan `cwd` dan `ext` menggunakan **sprintf**. Kemudian merename nama path file dengan **rename** (sama saja dengan memindahkan file).
+```c
+int listFilesFromDirectory(char *pathAwal, int *jumlahFile) {
+    char path[PATH_MAX];
+    struct dirent *dp;
+    DIR *dir = opendir(pathAwal);
+
+    if (!dir) {
+        return 0;
+    }
+
+    while ((dp = readdir(dir)) != NULL) {
+        if (strcmp(dp->d_name, ".") != 0 && strcmp(dp->d_name, "..") != 0) {
+            char full_path[PATH_MAX];
+            sprintf(full_path, "%s/%s", pathAwal, dp->d_name);
+            if (isExistAndRegFile(full_path)) {
+                sprintf(listFile[*jumlahFile], "%s", full_path);
+                *jumlahFile += 1;
+            }
+
+            strcpy(path, pathAwal);
+            strcat(path, "/");
+            strcat(path, dp->d_name);
+
+            listFilesFromDirectory(path, jumlahFile);
+        }
+    }
+
+    closedir(dir);
+    return 1;
+}
+```
+Fungsi untuk menglist nama path file-file dalam direktori secara rekursif. Pertama, mencoba membuka direktori dengan **opendir** untuk mengecek apakah dia adalah direktori. Jika iya, maka buka direktori dengan **readdir**. Dan menggunakan **while** untuk menglist file-file dalam direktori tersebut, menggunakan **dp->d_name**. Kemudian memanggil fungsi `listFilesFromDirectory()` lagi untuk menglist file-file secara rekursif, jika dia merupakan folder.
+### Screenshot
+#### 3a
+enter link description here
+![enter image description here](Screenshot/3a.png)
+#### 3b
+![enter image description here](Screenshot/3b.png)
+#### 3c
+![enter image description here](Screenshot/3c.png)
+#### 3d
+![enter image description here](Screenshot/3d.png)
