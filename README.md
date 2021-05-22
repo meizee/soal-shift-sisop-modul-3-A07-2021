@@ -230,7 +230,7 @@ shmdt(result_matrix);
 exit(0);
 ```
 
-Screenshot:
+#### **Screenshot***:
 ![2a](Screenshot/2a.jpg)
 
 ### **2b. Operasi Matriks dengan Shared Memory**
@@ -247,7 +247,7 @@ long long int (*result_matrix)[6];
 
 Selanjutnya membuat dua fungsi faktorial yang diperlukan dalam operasi dua matriks, yaitu fungsi `factorial1` dan `factorial2`
 
-`factorial2` digunakan untuk mempermudah perhitungan m!/(m-n)!
+`factorial2` digunakan untuk mempermudah perhitungan a!/(a-b)!
 ```C
 long long int factorial2(int m, int n){
     long long int res=1;
@@ -258,7 +258,7 @@ long long int factorial2(int m, int n){
 }
 ```
 
-`factorial1` digunakan untuk melakukan perhitungan n!
+`factorial1` digunakan untuk melakukan perhitungan a!
 ```C
 long long int factorial1(int n){
     if(n>=1){
@@ -382,15 +382,16 @@ shmctl(shmid,IPC_RMID,NULL);
 exit(0);
 ```
 
-Screenshot:
+#### **Screenshot***:
 ![2b](Screenshot/2b.jpg)
 
 
-### **2c. Menampilkan Proses dengan Pipe**
+### **2c. Mengecek Proses Teratas dengan Pipe**
 
 >"Karena takut lag dalam pengerjaannya membantu Loba, Crypto juga membuat program (soal2c.c) untuk mengecek 5 proses teratas apa saja yang memakan resource komputernya dengan command “ps aux | sort -nrk 3,3 | head -5” (Catatan!: Harus menggunakan IPC Pipes)"
 
 Pertama, kita inisiasi variabel yang dibutuhkan, `fd1` dan `fd2` digunakan untuk menyimpan dua output dari masing-masing pipe. `argv1` digunakan untuk menyimpan command `ps aux`. `argv2` digunakan untuk menyimpan command `sort`. Dan `argv3` digunakan untuk menyimpan command `head`.
+
 ```C
 int fd1[2]; // Used to store two ends of first pipe 
 int fd2[2]; // Used to store two ends of second pipe 
@@ -400,7 +401,7 @@ char *argv3[] = {"head", "-5", NULL};
 pid_t p;
 ```
 
-Membuat dua pipe dengan fd1 dan fd2, jika pembuatan pipe gagal, maka akan menampilkan pesan "Pipe Failed".
+Membuat pipe dengan bantuan fd1 dan fd2, jika pembuatan pipe gagal, maka akan menampilkan pesan "Pipe Failed".
 ```C
 if (pipe(fd1)==-1) { 
 	fprintf(stderr, "Pipe Failed" ); 
@@ -412,8 +413,62 @@ if (pipe(fd2)==-1) {
 } 
 ```
 
+Selanjutnya, melakukan spawning proses dengan fork, dan tampilkan pesan error jika fork gagal
+```C
+p = fork(); 
 
+if (p < 0) { 
+	fprintf(stderr, "fork Failed" ); 
+	return 1; 
+}
+```
 
+Pada parent proses akan dieksekusi command `ps aux` beserta argumennya dengan fungsi `execv` dan dikirimkan data output dengan variabel fd1 menggunakan `dup2`.
+```C
+// Parent process 
+else if (p == 0) { 
+	close(fd1[0]);
+        dup2(fd1[1], STDOUT_FILENO);
+        execv("/bin/ps", argv1); 
+} 
+```
 
-### **Screenshot***:
+Selanjutnya, pada child process akan dilakukan fork lagi sehingga menghasilkan proses baru dan dilakukan pengecekan apakah fork berhasil dibuat atau tidak. 
+
+Di dalam proses baru ini, parent process akan menerima data input dengan variabel fd1, juga mengeksekusi command `sort` dan argumennya dengan `execv`. Selanjutnya mengirimkan data output dengan variabel fd2.
+
+Pada child process-nya akan menerima data input dengan variabel fd2, dan melakukan eksekusi command `head` dan argumennya menggunakan fungsi `execv`.
+```C
+// child process 
+else{ 
+        wait(NULL);
+        pid_t p2;
+        p2 = fork();
+
+        if(p2 < 0){
+            fprintf(stderr, "fork Failed" ); 
+		    return 1; 
+      	}
+
+	else if(p2==0){
+		close(fd1[1]);
+		dup2(fd1[0], STDIN_FILENO);
+		close(fd2[0]);
+		dup2(fd2[1], STDOUT_FILENO);
+		execv("/bin/sort", argv2);
+	}
+
+	else{
+		close(fd1[0]);
+		close(fd1[1]);
+
+		close(fd2[1]);
+		dup2(fd2[0], STDIN_FILENO);
+		close(fd2[0]);
+
+		execv("/bin/head", argv3);
+	}
+``
+
+#### **Screenshot***:
 ![2c](Screenshot/2c.jpg)
