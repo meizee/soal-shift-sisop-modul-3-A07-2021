@@ -484,7 +484,7 @@ else{
 
 ## **3. Ayub Mengkategorikan File**
 
-> Source Code  **[soal3.c](https://github.com/hasnarof/soal-shift-sisop-modul-2-A07-2021/blob/main/soal3/soal3.c)**
+> Source Code  **[soal3.c](https://github.com/meizee/soal-shift-sisop-modul-3-A07-2021/blob/main/soal3/soal3.c)**
 
 Program dapat:
 1. Program dapat menerima argumen `-f` untuk mengkategorikan file.
