@@ -194,9 +194,9 @@ printf("Matrix a:\n");
         }
         printf("\n");
     }
+```
 
-
-Setelah itu, kita perlu membuat thread sebanyak empat untuk melakukan perkalian matrix dengan fungsi `mult_matrix`.
+Setelah itu, kita perlu membuat thread dengan command `pthread_create` sebanyak empat untuk melakukan perkalian matrix dengan fungsi `mult_matrix`.
 ```C
 for(int i=0; i<4; i++)
     {
@@ -204,7 +204,7 @@ for(int i=0; i<4; i++)
     }
 ````
 
-Menggabungkan semua thread
+Melakukan penggabungan/join pada semua thread ke program utama
 ```C
 pthread_join(tid[0], NULL);
 pthread_join(tid[1], NULL);
@@ -224,38 +224,196 @@ Print hasil matriks perkalian yang telah dihitung
     }
 ```
 
-Menyimpan hasil perkalian matriks di shared memory
+Melakukan detach proses yang sudah di-attach pada shared memory
 ```C
 shmdt(result_matrix);
 exit(0);
 ```
 
 Screenshot:
-![2a]()
+![2a](Screenshot/2a.jpg)
 
 ### **2b. Operasi Matriks dengan Shared Memory**
 
 >"Membuat program dengan menggunakan matriks output dari program sebelumnya (program soal2a.c) (Catatan!: gunakan shared memory). Kemudian matriks tersebut akan dilakukan perhitungan dengan matrix baru (input user) sebagai berikut contoh perhitungan untuk matriks yang a da. Perhitungannya adalah setiap cel yang berasal dari matriks A menjadi angka untuk faktorial, lalu cel dari matriks B menjadi batas maksimal faktorialnya matri(dari paling besar ke paling kecil) (Catatan!: gunakan thread untuk perhitungan di setiap cel)."
 
+Pertama, kita inisasi terlebih dahulu variabel global yang dibutuhkan, `tid` yang digunakan untuk thread dengan ukuran 24 karena kita akan membuat thread di setiap sel matriks, `a_glob` dan `b_glob` untuk menyimpan variabel matriks a dan b, dan `result_matrix` sebagai matriks hasil operasi.
+```C
+pthread_t tid[24];
+long long  int a_glob[4][6], b_glob[4][6];
+long long int output[4][6];
+long long int (*result_matrix)[6];
+```
+
+Selanjutnya membuat dua fungsi faktorial yang diperlukan dalam operasi dua matriks, yaitu fungsi `factorial1` dan `factorial2`
+
+`factorial2` digunakan untuk mempermudah perhitungan m!/(m-n)!
+```C
+long long int factorial2(int m, int n){
+    long long int res=1;
+    for(int j=m; j>n; j--){
+        res = res*j;
+    }
+    return res;
+}
+```
+
+`factorial1` digunakan untuk melakukan perhitungan n!
+```C
+long long int factorial1(int n){
+    if(n>=1){
+        return n*factorial1(n-1);
+    }
+    else{
+        return 1;
+    }
+}
+```
+
+Selanjutnya membuat fungsi ``mut_matrix` untuk melakukan operasi pada kedua matriks. Di dalamnya ada conditional statement sebagai berikut:
+1. Jika nilai suatu sel di matriks A (a) lebih besar atau sama dengan nilai sel di matriks B (b), maka nilai sel `output` sama dengan a!/(a-b)!. Untuk perhitungannya akan menggunakan fungsi `factorial2` dengan argumen nilai a dan nilai a-b.
+2. Jika nilai suatu sel di matriks B (b) lebih besar daripada nilai sel di matriks A (a), maka nilai sel `output` sama dengan a!. Untuk perhitungannya akan menggunakan fungsi `factorial1` dengan argumen nilai a.
+3. Jika nilai sel di matriks A atau matriks B sama dengan 0, maka nilai sel `output` juga sama dengan 0.
+
+```C
+void *mult_matrix(void *arg){
+    for(int i=0; i<4; i++){
+        for(int j=0; j<6; j++) {
+            pthread_t id = pthread_self();
+            int index = 0;
+            if(pthread_equal(id, tid[index])) {
+
+                //If a >= b -> a!/(a-b)!
+                if(a_glob[i][j] >= b_glob[i][j]){
+                    output[i][j] = factorial2(a_glob[i][j], (a_glob[i][j] - b_glob[i][j]));
+                }
+
+                //If b > a -> a!
+                if(b_glob[i][j] > a_glob[i][j]){
+                    output[i][j] = factorial1(a_glob[i][j]);
+                }
+
+                //If 0 -> 0
+                if(a_glob[i][j] == 0 || b_glob[i][j] == 0){
+                    output[i][j] = 0;
+                }
+
+                index++;
+                }
+            }
+        
+    }
+}
+```
+
+Dalam main, kita inisiasi variabel-variabel yang dibutuhkan untuk melakukan attach shared memory, `key`, `shmid`, dan `result_matrix` (yang mana merupakan matriks hasil perkalian dari soal 2a.)
+```C
+key_t key = 1112;
+int shmid = shmget(key,sizeof(int[4][6]), 0666 | IPC_CREAT);  
+result_matrix =  shmat(shmid,NULL,0);
+```
+
+Inisiasi variabel `matrix_b`
+```C
+long long int matrix_b[4][6] = { 
+    {14, 2, 3, 8, 8, 10},
+    {7, 4, 8, 5, 14, 9},
+    {9, 2, 13, 5, 11, 2},
+    {8, 7, 10, 4, 10, 8}
+};
+```
+
+Menampilkan nilai matriks A (yang merupakan matriks hasil perhitungan di soal 2a)
+```C
+printf("Matrix a:\n");
+    for(int k=0; k<4; k++) {
+        for(int l=0; l<6; l++){
+            //printf("%4d ", result_matrix[k][l]);
+            a_glob[k][l] = result_matrix[k][l];
+            printf("%4lld ", a_glob[k][l]);
+        }
+        printf("\n");
+    }
+```
+
+Menampilkan matriks B
+```C
+    printf("\nMatrix b:\n");
+    for(int k=0; k<4; k++) {
+        for(int l=0; l<6; l++){
+            b_glob[k][l] = matrix_b[k][l];
+            printf("%lld ", b_glob[k][l]);
+        }
+        printf("\n");
+    }
+```
+
+Setelah itu, kita perlu membuat thread dengan command `pthread_create` sebanyak 24 karena diminta untuk menggunakan thread untuk melakukan operasi pada setiap sel di matrix dengan fungsi `mult_matrix`.
+```C
+for(int i=0; i<24; i++)
+    {
+        pthread_create(&(tid[i]), NULL, &mult_matrix, NULL); 
+    }
+````
+
+Melakukan penggabungan/join pada semua thread ke program utama
+```C
+for(int i=0; i<24; i++){
+    pthread_join(tid[i], NULL);
+}
+```
 
 Print hasil matriks perkalian yang telah dihitung
 ```C
+printf("\nResult Matrix:\n");
+for(int i=0; i<4; i++){
+    for(int j=0; j<6; j++)
+    {
+        printf("%4lld ", output[i][j]);
+    }
+printf("\n");
+}
+```
 
+Melakukan detach proses yang sudah di-attach pada shared memory
+```C
+shmdt(result_matrix); 
+shmctl(shmid,IPC_RMID,NULL); 
+exit(0);
 ```
 
 Screenshot:
-![2b](Screenshot/ss%20soal1/1cd.png)
+![2b](Screenshot/2b.jpg)
 
 
 ### **2c. Menampilkan Proses dengan Pipe**
 
 >"Karena takut lag dalam pengerjaannya membantu Loba, Crypto juga membuat program (soal2c.c) untuk mengecek 5 proses teratas apa saja yang memakan resource komputernya dengan command “ps aux | sort -nrk 3,3 | head -5” (Catatan!: Harus menggunakan IPC Pipes)"
 
-Menyimpan hasil perkalian matriks di shared memory
+Pertama, kita inisiasi variabel yang dibutuhkan, `fd1` dan `fd2` digunakan untuk menyimpan dua output dari masing-masing pipe. `argv1` digunakan untuk menyimpan command `ps aux`. `argv2` digunakan untuk menyimpan command `sort`. Dan `argv3` digunakan untuk menyimpan command `head`.
 ```C
-shmdt(result_matrix);
-exit(0);
+int fd1[2]; // Used to store two ends of first pipe 
+int fd2[2]; // Used to store two ends of second pipe 
+char *argv1[] = {"ps", "aux", NULL};
+char *argv2[] = {"sort", "-nrk", "3,3", NULL};
+char *argv3[] = {"head", "-5", NULL};
+pid_t p;
 ```
 
+Membuat dua pipe dengan fd1 dan fd2, jika pembuatan pipe gagal, maka akan menampilkan pesan "Pipe Failed".
+```C
+if (pipe(fd1)==-1) { 
+	fprintf(stderr, "Pipe Failed" ); 
+	return 1; 
+} 
+if (pipe(fd2)==-1) { 
+    fprintf(stderr, "Pipe Failed" ); 
+    return 1; 
+} 
+```
+
+
+
+
 ### **Screenshot***:
-![2c]()
+![2c](Screenshot/2c.jpg)
