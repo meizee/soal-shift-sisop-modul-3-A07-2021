@@ -725,7 +725,6 @@ int listFilesFromDirectory(char *pathAwal, int *jumlahFile) {
 Fungsi untuk menglist nama path file-file dalam direktori secara rekursif. Pertama, mencoba membuka direktori dengan **opendir** untuk mengecek apakah dia adalah direktori. Jika iya, maka buka direktori dengan **readdir**. Dan menggunakan **while** untuk menglist file-file dalam direktori tersebut, menggunakan **dp->d_name**. Kemudian memanggil fungsi `listFilesFromDirectory()` lagi untuk menglist file-file secara rekursif, jika dia merupakan folder.
 ### Screenshot
 #### 3a
-enter link description here
 ![enter image description here](Screenshot/3a.png)
 #### 3b
 ![enter image description here](Screenshot/3b.png)
