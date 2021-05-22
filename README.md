@@ -109,7 +109,7 @@ Struktur Direktori:
 ### **2a. Perkalian Matriks**
 
 > Source Code 
- > **[soal2a.c](https://github.com/hasnarof/soal-shift-sisop-modul-2-A07-2021/blob/main/soal1/soal1.c)**
+ > **[soal2a.c](https://github.com/meizee/soal-shift-sisop-modul-3-A07-2021/blob/main/soal2/soal2a.c)**
 
 >"Membuat program perkalian matrix (4x3 dengan 3x6) dan menampilkan hasilnya. Matriks nantinya akan berisi angka 1-20 (tidak perlu dibuat filter angka)."
 
@@ -230,10 +230,13 @@ shmdt(result_matrix);
 exit(0);
 ```
 
-#### **Screenshot***:
+#### **Screenshot**:
 ![2a](Screenshot/2a.jpg)
 
 ### **2b. Operasi Matriks dengan Shared Memory**
+
+> Source Code 
+ > **[soal2b.c](https://github.com/meizee/soal-shift-sisop-modul-3-A07-2021/blob/main/soal2/soal2b.c)**
 
 >"Membuat program dengan menggunakan matriks output dari program sebelumnya (program soal2a.c) (Catatan!: gunakan shared memory). Kemudian matriks tersebut akan dilakukan perhitungan dengan matrix baru (input user) sebagai berikut contoh perhitungan untuk matriks yang a da. Perhitungannya adalah setiap cel yang berasal dari matriks A menjadi angka untuk faktorial, lalu cel dari matriks B menjadi batas maksimal faktorialnya matri(dari paling besar ke paling kecil) (Catatan!: gunakan thread untuk perhitungan di setiap cel)."
 
@@ -382,11 +385,14 @@ shmctl(shmid,IPC_RMID,NULL);
 exit(0);
 ```
 
-#### **Screenshot***:
+#### **Screenshot:**
 ![2b](Screenshot/2b.jpg)
 
 
 ### **2c. Mengecek Proses Teratas dengan Pipe**
+
+> Source Code 
+ > **[soal2c.c](https://github.com/meizee/soal-shift-sisop-modul-3-A07-2021/blob/main/soal2/soal2c.c)**
 
 >"Karena takut lag dalam pengerjaannya membantu Loba, Crypto juga membuat program (soal2c.c) untuk mengecek 5 proses teratas apa saja yang memakan resource komputernya dengan command “ps aux | sort -nrk 3,3 | head -5” (Catatan!: Harus menggunakan IPC Pipes)"
 
@@ -468,7 +474,7 @@ else{
 
 		execv("/bin/head", argv3);
 	}
-``
+```
 
-#### **Screenshot***:
+#### **Screenshot:**
 ![2c](Screenshot/2c.jpg)
