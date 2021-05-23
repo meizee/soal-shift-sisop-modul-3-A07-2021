@@ -7,779 +7,298 @@ Soal Shift Modul 3 |  Sistem Operasi 2021
 3. Fairuz Hasna Rofifah 05111940000003
 
 ## SOAL NO 1
-Keverk adalah orang yang cukup ambisius dan terkenal di angkatannya. Sebelum dia menjadi ketua departemen di HMTC, dia pernah mengerjakan suatu proyek dimana keverk tersebut meminta untuk membuat server database buku. Proyek ini diminta agar dapat digunakan oleh pemilik aplikasi dan diharapkan bantuannya dari pengguna aplikasi ini. 
-Di dalam proyek itu, Keverk diminta: 
-## 1A
-Pada saat client tersambung dengan server, terdapat dua pilihan pertama, yaitu register dan login. Jika memilih register, client akan diminta input id dan passwordnya untuk dikirimkan ke server. User juga dapat melakukan login. Login berhasil jika id dan password yang dikirim dari aplikasi client sesuai dengan list akun yang ada didalam aplikasi server. Sistem ini juga dapat menerima multi-connections. Koneksi terhitung ketika aplikasi client tersambung dengan server. Jika terdapat 2 koneksi atau lebih maka harus menunggu sampai client pertama keluar untuk bisa melakukan login dan mengakses aplikasinya. Keverk menginginkan lokasi penyimpanan id dan password pada file bernama `akun.txt` dengan format :
-### akun.txt`
-```
-id:password
-id2:password2
-```
-#### JAWAB
-Pertama, adalah membuat socket pada server dan client. Pada Server, fungsi`create_socket()` digunakan untuk membuat socket. Kemudian, pada fungsi main server, dijalankan forever loop yaitu `while(1)`, forever loop ini digunakan untuk menerima setiap ada permintaan dari client untuk menghubungkan ke server. Pada client untuk membuat socket pada client dibutuhkan fungsi `create_socket()`. Setelah server dan client berhasil dihubungkan, maka client akan membuat dua thead `InputCheck()` dan `OutputCheck()` digunakan untuk menerima inputan dari pengguna (input) yang kemudian akan diteruskan ke server dan  menerima ddsn mengecek pesan dari server apakah server terminate atau tidak dengan cara memanggil fungsi `getServerInput()`, kemudian mencetak pesan dari server (Output).
-Terdapat dua pilihan inputan register atau login, ketika client memilih register, maka fungsi daftar() akan dijalankan. Pertama client diminta untuk menginputkan id dan password. Lalu,  mengecek apakah user sudah terdaftar pada file `akun.txt` dengan memanggil fungsi `registered()`. Apabila id dan password belum terdaftar pada `akun.txt`, maka id dan password user akan dicatat pada file tersebut dengan format id:password. Ketika client memilih menu login, maka fungsi `login()` akan dijalankan. Pertama yaitu apakah ada client yang terhubung dengan server. Namun apabila tidak ada yang sedang terhubung ke server, maka server akan meminta input id dan password melalui fungsi `valid()`, kemudian pada fungsi `loginsuc()` dilakukan pengecekan apakah id dan password sesuai pada file akun.txt.
-SourceCode create_socket() client:
-```
-int create_socket()
-{
-    struct sockaddr_in s_address;
-    int ld = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    int res_val, opt = 1;
-    struct hostent *local_host; 
-    if (ld == -1) {
-        fprintf(stderr, "socket failed [%s]\n", strerror(errno));
-        exit(EXIT_FAILURE);
-    }
-    if (setsockopt(ld, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) {
-        perror("setsockopt");
-        exit(EXIT_FAILURE);
-    }
-    s_address.sin_family = AF_INET;
-    s_address.sin_port = htons(7000);
-    local_host = gethostbyname("127.0.0.1");
-    s_address.sin_addr = *((struct in_addr *)local_host->h_addr);
-    res_val = connect(ld, (struct sockaddr *)&s_address, sizeof(struct sockaddr_in));
-    if (res_val == -1) {
-        fprintf(stderr, "connect failed [%s]\n", strerror(errno));
-        exit(EXIT_FAILURE);
-    }
-    return ld;
-}
-```
-Source code InputCheck client:
-```
-void *InputCheck(void *fdc)
-{
-    int ld;
-    char Input[tool] = {0};
-    chdir("/home/hasna/sisop/praktikum3-1/Client");
-    ld = *(int *) fdc;
-    while (1) {
-        gets(Input);
-        send(ld, Input, maincheck, 0);
-        if (check) {
-            strcpy(cmd1, Input);
-    }
-    }
-}
-```
-Source code OutputCheck client:
+### 1A
 
-```
-void *OutputCheck(void *fdc) 
-{
-    int ld;
-    char Input[tool] = {0};
-    chdir("/home/hasna/sisop/praktikum3-1/Client");
-    ld = *(int *) fdc;
+Pada saat penggunaan yang menginginkan multi-connections maka kita membutuhkan thread sebagai alat untuk melakukan aktifitas tersebut. Oleh karena itu disini saya membuat dua buah thread untuk mengakomodasi hal tersebut untuk menyimpan username dan password. 
 
-    while (1) 
-    {
-        memset(Input, 0, maincheck);
-        activeserver(ld, Input);
-        printf("%s", Input);
-       	......
-        fflush(stdout);
-    }
-}
-```
-SouceCode fungsi main client:
-```
+```c
+//client
 int main(int argc, char const *argv[])
 {
     pthread_t tid[2];
     int fdc = create_socket();
-    pthread_create(&(tid[0]), NULL, &Output, (void *) &client_fd);
-    pthread_create(&(tid[1]), NULL, &InputCheck, (void *) &fdc);
+    //bisa menghandle client banyak
+    //minta masukka username
+    pthread_create(&(tid[0]), NULL, &cekoutput, (void *) &fdc);
+    //minta masukkan email
+    pthread_create(&(tid[1]), NULL, &cekinput, (void *) &fdc);
+    //joinkan
     pthread_join(tid[0], NULL);
     pthread_join(tid[1], NULL);
     close(fdc);
     return 0;
 }
-```
-SoureCode create_socket server:
-```
-int create_socket()
-{
-    struct sockaddr_in saddr;
-    int ld = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    int res_val, opt = 1;
-    
-    if (ld == -1) {
-        fprintf(stderr, "socket failed [%s]\n", strerror(errno));
-        exit(EXIT_FAILURE);
-    }
-    if (setsockopt(ld, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) {
-        perror("setsockopt");
-        exit(EXIT_FAILURE);
-    }
-    saddr.sin_family = AF_INET;
-    saddr.sin_port = htons(7000);
-    saddr.sin_addr.s_addr = INADDR_ANY;
-    res_val = bind(ld, (struct sockaddr *)&saddr, sizeof(struct sockaddr_in));
-    if (res_val != 0) {
-        fprintf(stderr, "bind failed [%s]\n", strerror(errno));
-        close(ld);
-        exit(EXIT_FAILURE);
-    }
-    res_val = listen(ld, 5);
-    if (res_val != 0) {
-        fprintf(stderr, "listen failed [%s]\n", strerror(errno));
-        close(ld);
-        exit(EXIT_FAILURE);
-    }
-    return ld;
-}
-```
-SourceCode fungsi daftar server:
-```
-void daftar(char *messages, int ld)
-{
-    char id[300], pass[300];
-    FILE *file;
-    file = fopen("akun.txt", "a+");
 
-    if (valid(ld, id, pass) != 0) {
-        ....
+```
+
+```c
+//register
+void daftar(char *messages, int fd)
+{
+    char id[300], password[300];
+    FILE *fp = fopen("akun.txt", "a+");
+
+    if (validasi(fd, id, password) != 0) {
+        if (sudahregister(fp, id)) {
+            send(fd, "Username tersebut sudah ada\n", SIZE_BUFFER, 0);
+        } else {
+            fprintf(fp, "%s:%s\n", id, password);
+            send(fd, "Register akun berhasil\n", SIZE_BUFFER, 0);
         }
     }
-    fclose(file);
+    fclose(fp);
 }
-```
-SourceCode fungsi login server:
-```
-void login(char *messages, int ld)
+
+//login
+void login(char *messages, int fd)
 {
-    if (sockets != -1) {
-        send(ld, "Server is busy. Please wait....\n", SIZE_BUFFER, 0);
+    if (socketawal != -1) {
+        send(fd, "Server sedang sibuk. Mohon menunggu\n", SIZE_BUFFER, 0);
         return;
     }
     //buka akun
-    char id[300], pass[300];
-    FILE *file = fopen("akun.txt", "a+");
-    if (valid(ld, id, pass) != 0) {
-        if (loginsuc(file, id, pass)) {
-            send(ld, "Login success!\n", SIZE_BUFFER, 0);
-            sockets = ld;
+    char id[300], password[300];
+    FILE *fp = fopen("akun.txt", "a+");
+    //cek apakah berhasil
+    if (validasi(fd, id, password) != 0) {
+        if (loginberhasil(fp, id, password)) {
+            send(fd, "Login berhasil!\n", SIZE_BUFFER, 0);
+            socketawal = fd;
             strcpy(validator[0], id);
-            strcpy(validator[1], pass);
+            strcpy(validator[1], password);
         } else {
-            send(ld, "Username or Password is wrong!\n", SIZE_BUFFER, 0);
+            send(fd, "Username atau password salah!\n", SIZE_BUFFER, 0);
         }
     }
-    fclose(file);
+    fclose(fp);
 }
+
 ```
-SourceCode fungsi loginsuc server:
-```
-bool loginsuc(FILE *file, char *id, char *pass)
-{
-    char bid[300], input[300];
-    sprintf(input, "%s:%s", id, pass);
-    while (fscanf(file, "%s", bid) != EOF) {
-        if (strcmp(bid, input) == 0) return true;
-    }
-    return false;
-}
-```
-SourceCode fungsi valid server:
-```
-int valid(int ld, char *id, char *pass)
-{
-    if (take_input(ld, "Input your Username = ", id) == 0) return 0;
-    if (take_input(ld, "Input your Password = ", pass) == 0) return 0;
-    return 1;
-}
-```
-SourceCode fungsi registered server:
-```
-bool registered(FILE *file, char *id)
-{
-    char bid[300], *temp1;
-    while (fscanf(file, "%s", bid) != EOF) {
-        temp1 = strtok(bid, ":");
-        if (strcmp(temp1, id) == 0) 
-            return true;
-    }
-    return false;
-}
-```
-SouceCode fungsi main server:
-```
-int main(int argc ,char const *argv1[])
-{
-    socklen_t addresslen;
-    struct sockaddr_in new_address;
-    pthread_t tid;
-    char buzz[300], argv[300 + terima];
-    int new_fd, res_val, server_fd = create_socket();
-    while (1) {
-        new_fd = accept(server_fd, (struct sockaddr *)&new_address, &addresslen);
-        if (new_fd >= 0) {
-            printf("the connection is connected to the port: %d\n", new_fd-3);
-            pthread_create(&tid, NULL, &inti, (void *) &new_fd);
-        } else {
-            fprintf(stderr, "connection failed %s\n", strerror(errno));
-        }
-    }
-    return 0;
-}
-```
-## 1B dan 1C
+### 1B
+
 Sistem memiliki sebuah database yang bernama files.tsv. Isi dari files.tsv ini adalah path file saat berada di server, publisher, dan tahun publikasi. Setiap penambahan dan penghapusan file pada folder file yang bernama  FILES pada server akan memengaruhi isi dari files.tsv. Folder FILES otomatis dibuat saat server dijalankan. 
-Tidak hanya itu, Keverk juga diminta membuat fitur agar client dapat menambah file baru ke dalam server. Direktori FILES memiliki struktur direktori di bawah ini : 
-### Direktori FILES
-```
-File1.ekstensi
-File2.ekstensi
-```
-Pertama client mengirimkan input ke server dengan struktur sebagai berikut :
-Contoh Command Client :
-```
-add
-```
 
-Output Client console:
-```
-Publisher:
-Tahun Publikasi:
-Filepath:
-```
-Kemudian, dari aplikasi client akan dimasukan data buku tersebut (perlu diingat bahwa Filepath ini merupakan path file yang akan dikirim ke server). Lalu client nanti akan melakukan pengiriman file ke aplikasi server dengan menggunakan socket. Ketika file diterima di server, maka row dari files.tsv akan bertambah sesuai dengan data terbaru yang ditambahkan.
+Jawaban : Setiap memasukkan sesuatu akan dideteksi dan akan dimasukkan ke database yaitu files.tsv disemua fungsi terdapat semua open files.tsv untuk mencatat apakah data tersebut ditambahkan atau dihapus.
 
-#### JAWAB
-Setelah melakukan login, maka akan diberi beberapa pilihan salah satunya adalah add. Ketika memilih add, maka fungsi `add()` akan di jalankan. Fungsi ini akan meminta inputan berupa publisher, tahun dan Filepath sesuai dengan soal yang diatas. Fungsi `take_input()` mengirim format input ke client dan akan mereturn `res_val`. Pada fungsi `OutputCheck()` client untuk mengecek pesan yang dikirim oleh server. Apabila pesan yang dikirim server adalah Filepath: , maka variable `check` akan bernilai true. Ketika user menginput filepath-nya melalui fungsi `CheckInput()`, maka filepath tersebut akan disimpan pada variabel `cmd1`. Setelah server menerima filepath dari user, maka server akan mengambil nama file yang diinputkan dari filepath dan fungsi `CeckNameFile()`. Untuk pengambilan nama file dilakukan dengan cara menyimpan string setelah tanda garis miring terakhir. Setelah server mendapatkan nama file dari inputan user, kemudian nama file akan dicek apakah sudah terdata di file `files.tsv`. Apabila belum terdata, maka server akan memanggil fungsi `downloaded()`, dan mengirimkan pesan `Start to send file`. Pada fungsi `sends()` untuk mengecek ukuran dari file yang akan dikirim ke server dan mengirim ukuran file dengan melalukan perulangan sebanyak file yang akan dikirim. Selanjutnya pada fungsi `INPUTFile()` untuk menerima ukuran file dari client dan akan dilakukan proses transfer file dari user dengan melakukan perulangan sebanyak ukuran file. Selanjutnya adalah mencetak data yang telah diinputkan patda fungsi add ke dalam file `files.tsv`, maka akan dilanjutkan dengan menulis data publisher, tahun, dan filepath pada file `files.tsv`.
-SourceCode fungsi add server:
-```
-void add(char *messages, int ld)
+```c
+void add(char *messages, int fd)
 {
-    char *DIR = "FILES";
+    char *dirName = "FILES";
     char publisher[300], year[300], client_path[300];
     sleep(0.001);
-    if (take_input(ld, "Publisher: ", publisher) == 0) return;
-    if (take_input(ld, "Tahun Publikasi: ", year) == 0) return;
-    if (take_input(ld, "Filepath: ", client_path) == 0) return;
+    if (ambilinput(fd, "Publisher: ", publisher) == 0) return;
+    if (ambilinput(fd, "Tahun Publikasi: ", year) == 0) return;
+    if (ambilinput(fd, "Filepath: ", client_path) == 0) return;
 
-    FILE *file = fopen("files.tsv", "a+");
-    char *fileName = CeckNameFile(client_path);
+    FILE *fp = fopen("files.tsv", "a+");
+    char *fileName = ceknamafile(client_path);
 
-    if (downloaded(file, fileName)) {
-        send(ld, "file that you uploaded already exists\n", SIZE_BUFFER, 0);
+    if (sudahdownload(fp, fileName)) {
+        send(fd, "File yang anda upload sudah ada\n", SIZE_BUFFER, 0);
     } else {
-        send(ld, "Start to send file\n", SIZE_BUFFER, 0);
-        mkdir(DIR, 0777);
-        if (INPUTFile(ld, DIR, fileName) == 0) {
-            fprintf(file, "%s\t%s\t%s\n", client_path, publisher, year);
-            printf("File send successfully\n");
+        send(fd, "Memulai mengirimkan file\n", SIZE_BUFFER, 0);
+        mkdir(dirName, 0777);
+        if (masukkanfile(fd, dirName, fileName) == 0) {
+            fprintf(fp, "%s\t%s\t%s\n", client_path, publisher, year);
+            printf("File berhasil dikirimkan\n");
             runninglog("add", fileName);
         } else {
             printf("Error occured when receiving file\n");
         }
     }
-    fclose(file);
-}
-```
-SourceCode take_input server:
-```
-int take_input(int ld, char *prompt, char *arah)
-{
-    send(ld, prompt, SIZE_BUFFER, 0);
-    int jumlah, res_val;
-    ioctl(ld, FIONREAD, &jumlah);
-    jumlah /= 300;
-    for (int i = 0; i <= jumlah; i++) {
-        res_val = recv(ld, arah, 300, 0);
-        if (res_val == 0) 
-            return res_val;
-    }
-    while (strcmp(arah, "") == 0) {
-        res_val = recv(ld, arah, 300, 0);
-        if (res_val == 0) return res_val;
-    }
-    printf("Command Client = %s\n", arah);
-    return res_val;
+    fclose(fp);
 }
 ```
 
-Source code InputCheck client:
-```
-void *InputCheck(void *fdc)
+### 1C
+
+Client dapat menggunakan command `add` untuk menambahkan data buku.
+
+Disini perlu melakukan pengecekkan apakah data tersebut sudah ada atau belum. Apabila data tersebut belum ada maka akan dilakukan input data seperti diabawah ini.
+
+```c
+void add(char *messages, int fd)
 {
-    int ld;
-    char Input[tool] = {0};
-    chdir("/home/hasna/sisop/praktikum3-1/Client");
-    ld = *(int *) fdc;
-    while (1) {
-        gets(Input);
-        send(ld, Input, maincheck, 0);
-        if (check) {
-            strcpy(cmd1, Input);
-    }
-    }
-}
-```
-Source code OutputCheck client:
+    char *dirName = "FILES";
+    char publisher[300], year[300], client_path[300];
+    sleep(0.001);
+    if (ambilinput(fd, "Publisher: ", publisher) == 0) return;
+    if (ambilinput(fd, "Tahun Publikasi: ", year) == 0) return;
+    if (ambilinput(fd, "Filepath: ", client_path) == 0) return;
 
-```
-void *OutputCheck(void *fdc) 
-{
-    int ld;
-    char Input[tool] = {0};
-    chdir("/home/hasna/sisop/praktikum3-1/Client");
-    ld = *(int *) fdc;
+    FILE *fp = fopen("files.tsv", "a+");
+    char *fileName = ceknamafile(client_path);
 
-    while (1) 
-    {
-        memset(Input, 0, maincheck);
-        activeserver(ld, Input);
-        printf("%s", Input);
-       	......
-        fflush(stdout);
-    }
-}
-```
-SourceCode CeckNameFile server:
-```
-char *CeckNameFile(char *filePath)
-{
-    char *res = strrchr(filePath, '/');
-    if (res) 
-        return res + 1;
-    else 
-        return filePath;
-}
-```
-SourceCode downloaded server:
-```
-bool downloaded(FILE *file, char *FILENM)
-{
-    char bid[300], *temp1;
-    while (fscanf(file, "%s", bid) != EOF) {
-        temp1 = CeckNameFile(strtok(bid, "\t"));
-        if (strcmp(temp1, FILENM) == 0) 
-            return true;
-    }
-    return false;
-}
-```
-SourceCode sends server:
-```
-int sends(int ld, char *FILENM)
-{
-    char buzz[300] = {0};
-    int res_val;
-    printf("Send File %s ke client\n", FILENM);
-    strcpy(buzz, FILENM);
-    sprintf(FILENM, "FILES/%s", buzz);
-    FILE *file;
-    file = fopen(FILENM, "r");
-
-    if (!file) {
-        printf("File is not found\n");
-        send(ld, "File is not found\n", SIZE_BUFFER, 0);
-        return -1;
-    }
-    send(ld, "Start to receive file\n", SIZE_BUFFER, 0);
-    send(ld, buzz, SIZE_BUFFER, 0);
-
-    fseek(file, 0L, SEEK_END);
-    int size = ftell(file);
-    rewind(file);
-    sprintf(buzz, "%d", size);
-    send(ld, buzz, SIZE_BUFFER, 0);
-
-    while ((res_val = fread(buzz, 1, 300, file)) > 0) {
-        send(ld, buzz, res_val, 0);
-    }
-    recv(ld, buzz, 300, 0);
-    printf("File sent successfully\n");
-    fclose(file);
-    return 0;
-}
-```
-SourceCode fungsi INPUTFile server:
-```
-int INPUTFile(int ld, char *DIRname, char *targetfileN)
-{
-    int res_val, size;
-    char buzz[300] = {0}, in[1];
-
-    res_val = recv(ld, buzz, 300, 0);
-    if (res_val == 0 || strcmp(buzz, "File was found") != 0) {
-        if (res_val == 0) printf("Connection to cilent was disconnect\n");
-        else puts(buzz);
-            return -1;
-    }
-    recv(ld, buzz, SIZE_BUFFER, 0);
-    size = atoi(buzz);
-
-    printf("File sent %s to server\n", targetfileN);
-    sprintf(buzz, "%s/%s", DIRname,targetfileN);
-    FILE *file = fopen(buzz, "w+");
-
-    while (size-- > 0) {
-        if ((res_val = recv(ld, in, 1, 0)) < 0)
-            return res_val;
-            fwrite(in, 1, 1, file);
-    }
-    res_val = 0;
-    printf("File sent successfully to server\n");
-    fclose(file);
-    return res_val;
-}
-```
-
-## 1D
-Dan client dapat mendownload file yang telah ada dalam folder FILES di server, sehingga sistem harus dapat mengirim file ke client. Server harus melihat dari files.tsv untuk melakukan pengecekan apakah file tersebut valid. Jika tidak valid, maka mengirimkan pesan error balik ke client. Jika berhasil, file akan dikirim dan akan diterima ke client di folder client tersebut. 
-
-Contoh Command client
-```
-download TEMPfile.pdf
-```
-#### JAWAB
-Ketika sudah melakukan login, dan menginputkan download, maka fungsi `download()` akan terpanggil. Pertama, mengecek apakah file yang akan didownload telah terdaftar pada file `files.ts` dengan memanggil fungsi `downloaded()`. Apabila file terdapat pada file tersebut maka akan memanggil fungsi `send()`. Jika file yang akan didownload pada file tersebut tidak ada maka akan mereturn `File is not found`. Pada fungsi `sends()`, pertama membuat filepath yaitu `FILES/<nama file>` dan mengecek apakah fungsi valid atau tidak.
-SourceCode download server:
-```
-void download(char *FILENM, int ld)
-{
-    FILE *file = fopen("files.tsv", "a+");
-    if (downloaded(file, FILENM)) {
-        sends(ld, FILENM);
+    if (sudahdownload(fp, fileName)) {
+        send(fd, "File yang anda upload sudah ada\n", SIZE_BUFFER, 0);
     } else {
-        send(ld, "File is not found\n", SIZE_BUFFER, 0);
+        send(fd, "Memulai mengirimkan file\n", SIZE_BUFFER, 0);
+        mkdir(dirName, 0777);
+        if (masukkanfile(fd, dirName, fileName) == 0) {
+            fprintf(fp, "%s\t%s\t%s\n", client_path, publisher, year);
+            printf("File berhasil dikirimkan\n");
+            runninglog("add", fileName);
+        } else {
+            printf("Error occured when receiving file\n");
+        }
     }
-    fclose(file);
+    fclose(fp);
 }
-```
-SourceCode sends server:
-```
-int sends(int ld, char *FILENM)
+
+
+### 3d
+Client dapat mendownload
+
+Disini dibuat sebuah fungsi yang berguna untuk melakukan pengecekkan sehingga dibutuhkan pesan error apabila file tersebut tidak ada, dan memberikan peringatan juga agar file tersebut tidak duplikat.
+
+```c
+void download(char *filename, int fd)
 {
-    char buzz[300] = {0};
-    int res_val;
-    printf("Send File %s ke client\n", FILENM);
-    strcpy(buzz, FILENM);
-    sprintf(FILENM, "FILES/%s", buzz);
-    FILE *file;
-    file = fopen(FILENM, "r");
-
-    if (!file) {
-        printf("File is not found\n");
-        send(ld, "File is not found\n", SIZE_BUFFER, 0);
-        return -1;
+    FILE *fp = fopen("files.tsv", "a+");
+    if (sudahdownload(fp, filename)) {
+        kirim(fd, filename);
+    } else {
+        send(fd, "File tersebut tidak ada\n", SIZE_BUFFER, 0);
     }
-    send(ld, "Start to receive file\n", SIZE_BUFFER, 0);
-    send(ld, buzz, SIZE_BUFFER, 0);
-
-    fseek(file, 0L, SEEK_END);
-    int size = ftell(file);
-    rewind(file);
-    sprintf(buzz, "%d", size);
-    send(ld, buzz, SIZE_BUFFER, 0);
-
-    while ((res_val = fread(buzz, 1, 300, file)) > 0) {
-        send(ld, buzz, res_val, 0);
-    }
-    recv(ld, buzz, 300, 0);
-    printf("File sent successfully\n");
-    fclose(file);
-    return 0;
+    fclose(fp);
 }
 ```
-SourceCode downloaded server:
-```
-bool downloaded(FILE *file, char *FILENM)
-{
-    char bid[300], *temp1;
-    while (fscanf(file, "%s", bid) != EOF) {
-        temp1 = CeckNameFile(strtok(bid, "\t"));
-        if (strcmp(temp1, FILENM) == 0) 
-            return true;
-    }
-    return false;
-}
-```
-## 1E
-Setelah itu, client juga dapat menghapus file yang tersimpan di server. Akan tetapi, Keverk takut file yang dibuang adalah file yang penting, maka file hanya akan diganti namanya menjadi ‘old-NamaFile.ekstensi’. Ketika file telah diubah namanya, maka row dari file tersebut di file.tsv akan terhapus.
 
-Contoh Command Client:
-```
-delete TEMPfile.pdf
-```
-#### JAWAB
-Setelah login dan kemudian menginpunkan delete, maka akan memanggil fungsi `delete()`. Sebelum bisa mendelete file maka inputkan file yang akan di delete harus sesuai dan terdata pada di `files.tsv`. Fungsi ini, akan mengecek file yang akan dihapus ada atau tidak di file `files.tsv` dengan memanggil fungsi `downloaded()`. Apabila file tersebut ada pada `files.tsv`, maka setiap data di files.tsv dipindahkan ke file `temp.tsv` dan sambil melakukan pengecekkan nama file. Apabila nama file pada` files.tsv` sama dengan file yang ingin dihapus, maka data tersebut tidak perlu dipindahkan ke `temp.tsv`. Apabila semua data telah dipindahkan, hapus `files.tsv` dan ubah nama `temp.tsv` menjadi `files.tsv`. Kemudian, ubah nama file pada folder `FILES` dengan cara menyimpan nama baru dan nama lama, lalu panggil fungsi `rename()`.
-SourceCode delete server:
-```
-void delete(char *FILENM, int ld)
+### 1e
+Client dapat menghapus file yang tersimpan dalam server.
+
+Disini dibuat sebuah fungsi delete yang berguna untuk melakukan penghapusan data di files.tsv serta menambahkan history di running.log
+
+```c
+void hapus(char *filename, int fd)
 {
     //buka file
-    FILE *file = fopen("files.tsv", "a+");
-    char bid[300], currFilePath[300], publisher[300], year[300];
-    if (downloaded(file, FILENM)) {
-        rewind(file);
+    FILE *fp = fopen("files.tsv", "a+");
+    char db[300], currFilePath[300], publisher[300], year[300];
+    if (sudahdownload(fp, filename)) {
+        rewind(fp);
         FILE *tmp_fp = fopen("temp.tsv", "a+");
         //buat sebuah temp supaya pada saat pertukaran data tidak berubah2
-        while (fgets(bid, SIZE_BUFFER, file)) {
-            sscanf(bid, "%s\t%s\t%s", currFilePath, publisher, year);
-            if (strcmp(CeckNameFile(currFilePath), FILENM) != 0) { 
-                fprintf(tmp_fp, "%s", bid);
+        while (fgets(db, SIZE_BUFFER, fp)) {
+            sscanf(db, "%s\t%s\t%s", currFilePath, publisher, year);
+            if (strcmp(ceknamafile(currFilePath), filename) != 0) { 
+                fprintf(tmp_fp, "%s", db);
             }
-            memset(bid, 0, SIZE_BUFFER);
+            memset(db, 0, SIZE_BUFFER);
         }
         fclose(tmp_fp);
-        fclose(file);
+        fclose(fp);
         remove("files.tsv");
         rename("temp.tsv", "files.tsv");
         char deletedFileName[300];
-        sprintf(deletedFileName, "FILES/%s", FILENM);
+        sprintf(deletedFileName, "FILES/%s", filename);
         char newFileName[300];
-        sprintf(newFileName, "FILES/old-%s", FILENM);
+        sprintf(newFileName, "FILES/old-%s", filename);
         rename(deletedFileName, newFileName);
-        send(ld, "This file was successfully deleted\n", SIZE_BUFFER, 0);
-        runninglog("delete", FILENM);
+        send(fd, "File tersebut berhasil dihapus\n", SIZE_BUFFER, 0);
+        runninglog("delete", filename);
     } 
     else {
-        send(ld, "File failed to download\n", SIZE_BUFFER, 0);
-        fclose(file);
+        send(fd, "File gagal didownload\n", SIZE_BUFFER, 0);
+        fclose(fp);
     }
 }
 ```
-SourceCode downloaded server:
-```
-bool downloaded(FILE *file, char *FILENM)
+
+
+### 1f
+
+Client dapat melihat semua isi files.tsv dengan memanggil suatu perintah yang bernama see.
+
+Disini dibuat sebuah fungsi yang bertujuan untuk melihat data di files.tsv untuk memastikan data tersebut ada dengan membuat fitur boolean sehingga bisa digunakan didua kondisi. Kondisi see dan find dengan menggunakan strstr
+
+```c
+void see(char *buf, int fd, bool isFind)
 {
-    char bid[300], *temp1;
-    while (fscanf(file, "%s", bid) != EOF) {
-        temp1 = CeckNameFile(strtok(bid, "\t"));
-        if (strcmp(temp1, FILENM) == 0) 
-            return true;
-    }
-    return false;
-}
-```
-
-## 1F
-Client dapat melihat semua isi files.tsv dengan memanggil suatu perintah yang bernama see. Output dari perintah tersebut keluar dengan format. 
-Contoh Command Client :
-```
-see
-```
-
-Contoh Format Output pada Client:
-```
-Nama:
-Publisher:
-Tahun publishing:
-Ekstensi File : 
-Filepath :
-
-Nama:
-Publisher:
-Tahun publishing:
-Ekstensi File : 
-Filepath : 
-```
-#### JAWAB
-Apabila user telah melakukan login dan  memilih menu see, maka fungsi `see()` akan dijalankan dan mengecek apakah file yang kita inputan terdapat pada `files.tsv`. Kemudian memanggil fungsi `dividingfile()` untuk membagi nama file dan eksistensi pada setiap filepath pada `files.tsv`. Ekstensi yag diambil dari string yaitu setelah tanda titik pada filepath. Kemudian, fungsi ini akan memanggil fungsi `CeckNameFile()`. Fungsi ini digunakan untuk mendapatkan nama file dan ekstensi dan string sebelum tanda titik supaya file mendapatkan nama saja. Kembali pada fungsi `see()` akan mencetak semua data sesuai dengan format diatas dan mengirimnya ke client. Setelah proses pengecekkan data selesai, dilanjutkan dengan mengecek apakah data ditemukan atau tidak.
-SourceCode fungsi see server:
-```
-void see(char *buzz, int ld, bool isFind)
-{
-    int tambah = 0;
+    int counter = 0;
     FILE *src = fopen("files.tsv", "r");
     if (!src) {
-        write(ld, "Files.tsv not found\n", SIZE_BUFFER);
+        write(fd, "Files.tsv not found\n", SIZE_BUFFER);
         return;
     }
 
-    char temp[300 + 85], nameFILE[300/3], ext[5],
-        FileP[300/3], publisher[300/3], year[10];
+    char temp[300 + 85], namafile[300/3], ext[5],
+        filepath[300/3], publisher[300/3], year[10];
         
-    while (fscanf(src, "%s\t%s\t%s", FileP, publisher, year) != EOF) {
-        dividingfile(FileP, nameFILE, ext);
-        if (isFind && strstr(nameFILE, buzz) == NULL) continue;
-        tambah++;
+    while (fscanf(src, "%s\t%s\t%s", filepath, publisher, year) != EOF) {
+        pemisahfile(filepath, namafile, ext);
+        if (isFind && strstr(namafile, buf) == NULL) continue;
+        counter++;
 
         sprintf(temp, 
             "Nama: %s\nPublisher: %s\nTahun publishing: %s\nEkstensi File: %s\nFilepath: %s\n\n",
-            nameFILE, publisher, year, ext, FileP
+            namafile, publisher, year, ext, filepath
         );
-        write(ld, temp, SIZE_BUFFER);
+        write(fd, temp, SIZE_BUFFER);
         sleep(0.001);
     }
-    if(tambah == 0) {
-        if (isFind) write(ld, "the command is not found in files.tsv\n", SIZE_BUFFER);
-        else write(ld, "Data is not found in database files.tsv\n", SIZE_BUFFER);
+    if(counter == 0) {
+        if (isFind) write(fd, "perintah tersebut tidak ada di files.tsv\n", SIZE_BUFFER);
+        else write(fd, "Data tidak ada di database files.tsv\n", SIZE_BUFFER);
     } 
     fclose(src);
 }
+
 ```
-SourceCode fungsi dividingfile server:
-```
-void dividingfile(char *FileP, char *nameFILE, char *ext)
+
+### 1g
+
+Client dapat menggunakan command find.
+
+Di sini dibuat sekaligus dengan fungsi see untuk upaya tidak doublenya pencarian. Karena disini mengecek data yang dengan menggunakan strstr.
+
+``` c
+void see(char *buf, int fd, bool isFind)
 {
-    char *temp;
-    if (temp = strrchr(FileP, '.')) strcpy(ext, temp + 1);
-    else strcpy(ext, "-");
-    strcpy(nameFILE, CeckNameFile(FileP));
-    strtok(nameFILE, ".");
-}
-```
-SourceCode CeckNameFile server:
-```
-char *CeckNameFile(char *filePath)
-{
-    char *res = strrchr(filePath, '/');
-    if (res) 
-        return res + 1;
-    else 
-        return filePath;
-}
-```
-## 1G
-Aplikasi client juga dapat melakukan pencarian dengan memberikan suatu string. Hasilnya adalah semua nama file yang mengandung string tersebut. Format output seperti format output f.
-Contoh Client Command:
-```
-find TEMP
-```
-#### JAWAB
-Apabila user telah melakukan login dan  memilih menu find sesuai dengan data, maka pertama adalah memanggil fungsi `see()`, pertama untuk mengecek apakah format sesuai dengan data yang terdapat pada `files.tsv`. Apabila data yang dicari terdapat pada file tersebut, maka dilakukan looping dari baris awal hingga akhir dari `files.tsv` yang ada.  Kemudian memanggil fungsi `dividingfile()` untuk membagi nama file dan eksistensi pada setiap filepath pada `files.tsv`. kstensi yag diambil dari string yaitu setelah tanda titik pada filepath. Kemudian, fungsi ini akan memanggil fungsi `CeckNameFile()`. Fungsi ini digunakan untuk mendapatkan nama file dan ekstensi dan string sebelum tanda titik supaya file mendapatkan nama saja. Kembali ke fungsi see(), untuk mengecek apakah string yang dikirim ke server terdapat pada nama file yang ditunjuk. Apabila tidak ada data yang diinginkan, maka file tersebut akan dilewati. Kemudian proses dilanjutkan dengan menulis semua data sesuai format dan mengirimnya ke client. Setelah proses pengecekkan data selesai, dilanjutkan dengan mengecek apakah data ditemukan atau tidak.
-SourceCode fungsi see server:
-```
-void see(char *buzz, int ld, bool isFind)
-{
-    int tambah = 0;
+    int counter = 0;
     FILE *src = fopen("files.tsv", "r");
     if (!src) {
-        write(ld, "Files.tsv not found\n", SIZE_BUFFER);
+        write(fd, "Files.tsv not found\n", SIZE_BUFFER);
         return;
     }
 
-    char temp[300 + 85], nameFILE[300/3], ext[5],
-        FileP[300/3], publisher[300/3], year[10];
+    char temp[300 + 85], namafile[300/3], ext[5],
+        filepath[300/3], publisher[300/3], year[10];
         
-    while (fscanf(src, "%s\t%s\t%s", FileP, publisher, year) != EOF) {
-        dividingfile(FileP, nameFILE, ext);
-        if (isFind && strstr(nameFILE, buzz) == NULL) continue;
-        tambah++;
+    while (fscanf(src, "%s\t%s\t%s", filepath, publisher, year) != EOF) {
+        pemisahfile(filepath, namafile, ext);
+        if (isFind && strstr(namafile, buf) == NULL) continue;
+        counter++;
 
         sprintf(temp, 
             "Nama: %s\nPublisher: %s\nTahun publishing: %s\nEkstensi File: %s\nFilepath: %s\n\n",
-            nameFILE, publisher, year, ext, FileP
+            namafile, publisher, year, ext, filepath
         );
-        write(ld, temp, SIZE_BUFFER);
+        write(fd, temp, SIZE_BUFFER);
         sleep(0.001);
     }
-    if(tambah == 0) {
-        if (isFind) write(ld, "the command is not found in files.tsv\n", SIZE_BUFFER);
-        else write(ld, "Data is not found in database files.tsv\n", SIZE_BUFFER);
+    if(counter == 0) {
+        if (isFind) write(fd, "perintah tersebut tidak ada di files.tsv\n", SIZE_BUFFER);
+        else write(fd, "Data tidak ada di database files.tsv\n", SIZE_BUFFER);
     } 
     fclose(src);
 }
-```
-SourceCode fungsi dividingfile server:
-```
-void dividingfile(char *FileP, char *nameFILE, char *ext)
-{
-    char *temp;
-    if (temp = strrchr(FileP, '.')) strcpy(ext, temp + 1);
-    else strcpy(ext, "-");
-    strcpy(nameFILE, CeckNameFile(FileP));
-    strtok(nameFILE, ".");
-}
-```
-SourceCode CeckNameFile server:
-```
-char *CeckNameFile(char *filePath)
-{
-    char *res = strrchr(filePath, '/');
-    if (res) 
-        return res + 1;
-    else 
-        return filePath;
-}
-```
-## 1H
-Dikarenakan Keverk waspada dengan pertambahan dan penghapusan file di server, maka Keverk membuat suatu log untuk server yang bernama running.log. Contoh isi dari log ini adalah
-### running.log
-```
-Tambah : File1.ektensi (id:pass)
-Hapus : File2.ektensi (id:pass)
-```
-#### JAWAB
-Pertama adalah membuat fungsi `runninglog()` untuk mengecek apakah ada `add` atau 1`delete` data ketika menjalankan program. Kemudian panggil fungsi `runninglog()` pada bagian akhir dari fungsi add() dan delete() ketika proses add dan delete file berhasil.
-SourceCode fungsi runninglog server:
-```
-void runninglog(char *command, char *FILENM)
-{
-    FILE *file;
-    file = fopen("running.log", "a+");
-    command = (strcmp(command, "add") == 0) ? "Tambah" : "Hapus";
-    fprintf(file, "%s : %s (%s:%s)\n", command, FILENM, validator[0], validator[1]);
-    fclose(file);
-}
-```
-SourceCode fungsi add server:
-```
-void add(char *messages, int ld)
-{
-    char *DIR = "FILES";
-    char publisher[300], year[300], client_path[300];
-    sleep(0.001);
-    if (take_input(ld, "Publisher: ", publisher) == 0) return;
-    if (take_input(ld, "Tahun Publikasi: ", year) == 0) return;
-    if (take_input(ld, "Filepath: ", client_path) == 0) return;
 
-    FILE *file = fopen("files.tsv", "a+");
-    char *fileName = CeckNameFile(client_path);
-
-    if (downloaded(file, fileName)) {
-        send(ld, "file that you uploaded already exists\n", SIZE_BUFFER, 0);
-    } else {
-       	    ...
-            runninglog("add", fileName);
-        } else {
-            printf("Error occured when receiving file\n");
-        }
-    }
-    fclose(file);
-}
-```
-SourceCode delete server:
-```
-void delete(char *FILENM, int ld)
-{
-    //buka file
-    FILE *file = fopen("files.tsv", "a+");
-    char bid[300], currFilePath[300], publisher[300], year[300];
-    if (downloaded(file, FILENM)) {
-        ...
-        send(ld, "This file was successfully deleted\n", SIZE_BUFFER, 0);
-        runninglog("delete", FILENM);
-    } 
-    else {
-        send(ld, "File failed to download\n", SIZE_BUFFER, 0);
-        fclose(file);
-    }
-}
 ```
 
+### 1h
+Ada log berupa `running.log`.
 
-Struktur Direktori:
-```
-├── Client
-│   ├── client.c
-│   ├── File2.extensi
-│   └── File1.extensi
-└── Server
-    ├── akun.txt
-    ├── files.tsv
-    ├── server.c
-    ├── running.log
-    └── FILES
-            ├── File2.extensi
-            └── File1.ekstensi
+Di sini dibuat sebuah fungsi yang bertujuan untuk mengecek apakah ada penambahan atau pengurangan data sehingga fungsi ini dimasukkan kedalam fungsi penambahan dan fungsi pengurangan untuk pengecekkan.
+
+```c
+void runninglog(char *cmd, char *filename)
+{
+    FILE *fp = fopen("running.log", "a+");
+    cmd = (strcmp(cmd, "add") == 0) ? "Tambah" : "Hapus";
+    fprintf(fp, "%s : %s (%s:%s)\n", cmd, filename, validator[0], validator[1]);
+    fclose(fp);
+}
 ```
 ### Kendala
 1. Tidak bisa menngunakan multi-connections, hanya single-connections
