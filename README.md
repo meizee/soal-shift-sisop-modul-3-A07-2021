@@ -16,11 +16,219 @@ Pada saat client tersambung dengan server, terdapat dua pilihan pertama, yaitu r
 id:password
 id2:password2
 ```
-## 1B
-Sistem memiliki sebuah database yang bernama files.tsv. Isi dari files.tsv ini adalah path file saat berada di server, publisher, dan tahun publikasi. Setiap penambahan dan penghapusan file pada folder file yang bernama  FILES pada server akan memengaruhi isi dari files.tsv. Folder FILES otomatis dibuat saat server dijalankan. Tidak hanya itu, 
+#### JAWAB
+Pertama, adalah membuat socket pada server dan client. Pada Server, fungsi`create_socket()` digunakan untuk membuat socket. Kemudian, pada fungsi main server, dijalankan forever loop yaitu `while(1)`, forever loop ini digunakan untuk menerima setiap ada permintaan dari client untuk menghubungkan ke server. Pada client untuk membuat socket pada client dibutuhkan fungsi `create_socket()`. Setelah server dan client berhasil dihubungkan, maka client akan membuat dua thead `InputCheck()` dan `OutputCheck()` digunakan untuk menerima inputan dari pengguna (input) yang kemudian akan diteruskan ke server dan  menerima ddsn mengecek pesan dari server apakah server terminate atau tidak dengan cara memanggil fungsi `getServerInput()`, kemudian mencetak pesan dari server (Output).
+Terdapat dua pilihan inputan register atau login, ketika client memilih register, maka fungsi daftar() akan dijalankan. Pertama client diminta untuk menginputkan id dan password. Lalu,  mengecek apakah user sudah terdaftar pada file `akun.txt` dengan memanggil fungsi `registered()`. Apabila id dan password belum terdaftar pada `akun.txt`, maka id dan password user akan dicatat pada file tersebut dengan format id:password. Ketika client memilih menu login, maka fungsi `login()` akan dijalankan. Pertama yaitu apakah ada client yang terhubung dengan server. Namun apabila tidak ada yang sedang terhubung ke server, maka server akan meminta input id dan password melalui fungsi `valid()`, kemudian pada fungsi `loginsuc()` dilakukan pengecekan apakah id dan password sesuai pada file akun.txt.
+SourceCode create_socket() client:
+```
+int create_socket()
+{
+    struct sockaddr_in s_address;
+    int ld = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    int res_val, opt = 1;
+    struct hostent *local_host; 
+    if (ld == -1) {
+        fprintf(stderr, "socket failed [%s]\n", strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+    if (setsockopt(ld, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) {
+        perror("setsockopt");
+        exit(EXIT_FAILURE);
+    }
+    s_address.sin_family = AF_INET;
+    s_address.sin_port = htons(7000);
+    local_host = gethostbyname("127.0.0.1");
+    s_address.sin_addr = *((struct in_addr *)local_host->h_addr);
+    res_val = connect(ld, (struct sockaddr *)&s_address, sizeof(struct sockaddr_in));
+    if (res_val == -1) {
+        fprintf(stderr, "connect failed [%s]\n", strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+    return ld;
+}
+```
+Source code InputCheck client:
+```
+void *InputCheck(void *fdc)
+{
+    int ld;
+    char Input[tool] = {0};
+    chdir("/home/hasna/sisop/praktikum3-1/Client");
+    ld = *(int *) fdc;
+    while (1) {
+        gets(Input);
+        send(ld, Input, maincheck, 0);
+        if (check) {
+            strcpy(cmd1, Input);
+    }
+    }
+}
+```
+Source code OutputCheck client:
 
-## 1 C
-Keverk juga diminta membuat fitur agar client dapat menambah file baru ke dalam server. Direktori FILES memiliki struktur direktori di bawah ini : 
+```
+void *OutputCheck(void *fdc) 
+{
+    int ld;
+    char Input[tool] = {0};
+    chdir("/home/hasna/sisop/praktikum3-1/Client");
+    ld = *(int *) fdc;
+
+    while (1) 
+    {
+        memset(Input, 0, maincheck);
+        activeserver(ld, Input);
+        printf("%s", Input);
+       	......
+        fflush(stdout);
+    }
+}
+```
+SouceCode fungsi main client:
+```
+int main(int argc, char const *argv[])
+{
+    pthread_t tid[2];
+    int fdc = create_socket();
+    pthread_create(&(tid[0]), NULL, &Output, (void *) &client_fd);
+    pthread_create(&(tid[1]), NULL, &InputCheck, (void *) &fdc);
+    pthread_join(tid[0], NULL);
+    pthread_join(tid[1], NULL);
+    close(fdc);
+    return 0;
+}
+```
+SoureCode create_socket server:
+```
+int create_socket()
+{
+    struct sockaddr_in saddr;
+    int ld = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    int res_val, opt = 1;
+    
+    if (ld == -1) {
+        fprintf(stderr, "socket failed [%s]\n", strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+    if (setsockopt(ld, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) {
+        perror("setsockopt");
+        exit(EXIT_FAILURE);
+    }
+    saddr.sin_family = AF_INET;
+    saddr.sin_port = htons(7000);
+    saddr.sin_addr.s_addr = INADDR_ANY;
+    res_val = bind(ld, (struct sockaddr *)&saddr, sizeof(struct sockaddr_in));
+    if (res_val != 0) {
+        fprintf(stderr, "bind failed [%s]\n", strerror(errno));
+        close(ld);
+        exit(EXIT_FAILURE);
+    }
+    res_val = listen(ld, 5);
+    if (res_val != 0) {
+        fprintf(stderr, "listen failed [%s]\n", strerror(errno));
+        close(ld);
+        exit(EXIT_FAILURE);
+    }
+    return ld;
+}
+```
+SourceCode fungsi daftar server:
+```
+void daftar(char *messages, int ld)
+{
+    char id[300], pass[300];
+    FILE *file;
+    file = fopen("akun.txt", "a+");
+
+    if (valid(ld, id, pass) != 0) {
+        ....
+        }
+    }
+    fclose(file);
+}
+```
+SourceCode fungsi login server:
+```
+void login(char *messages, int ld)
+{
+    if (sockets != -1) {
+        send(ld, "Server is busy. Please wait....\n", SIZE_BUFFER, 0);
+        return;
+    }
+    //buka akun
+    char id[300], pass[300];
+    FILE *file = fopen("akun.txt", "a+");
+    if (valid(ld, id, pass) != 0) {
+        if (loginsuc(file, id, pass)) {
+            send(ld, "Login success!\n", SIZE_BUFFER, 0);
+            sockets = ld;
+            strcpy(validator[0], id);
+            strcpy(validator[1], pass);
+        } else {
+            send(ld, "Username or Password is wrong!\n", SIZE_BUFFER, 0);
+        }
+    }
+    fclose(file);
+}
+```
+SourceCode fungsi loginsuc server:
+```
+bool loginsuc(FILE *file, char *id, char *pass)
+{
+    char bid[300], input[300];
+    sprintf(input, "%s:%s", id, pass);
+    while (fscanf(file, "%s", bid) != EOF) {
+        if (strcmp(bid, input) == 0) return true;
+    }
+    return false;
+}
+```
+SourceCode fungsi valid server:
+```
+int valid(int ld, char *id, char *pass)
+{
+    if (take_input(ld, "Input your Username = ", id) == 0) return 0;
+    if (take_input(ld, "Input your Password = ", pass) == 0) return 0;
+    return 1;
+}
+```
+SourceCode fungsi registered server:
+```
+bool registered(FILE *file, char *id)
+{
+    char bid[300], *temp1;
+    while (fscanf(file, "%s", bid) != EOF) {
+        temp1 = strtok(bid, ":");
+        if (strcmp(temp1, id) == 0) 
+            return true;
+    }
+    return false;
+}
+```
+SouceCode fungsi main server:
+```
+int main(int argc ,char const *argv1[])
+{
+    socklen_t addresslen;
+    struct sockaddr_in new_address;
+    pthread_t tid;
+    char buzz[300], argv[300 + terima];
+    int new_fd, res_val, server_fd = create_socket();
+    while (1) {
+        new_fd = accept(server_fd, (struct sockaddr *)&new_address, &addresslen);
+        if (new_fd >= 0) {
+            printf("the connection is connected to the port: %d\n", new_fd-3);
+            pthread_create(&tid, NULL, &inti, (void *) &new_fd);
+        } else {
+            fprintf(stderr, "connection failed %s\n", strerror(errno));
+        }
+    }
+    return 0;
+}
+```
+## 1B dan 1C
+Sistem memiliki sebuah database yang bernama files.tsv. Isi dari files.tsv ini adalah path file saat berada di server, publisher, dan tahun publikasi. Setiap penambahan dan penghapusan file pada folder file yang bernama  FILES pada server akan memengaruhi isi dari files.tsv. Folder FILES otomatis dibuat saat server dijalankan. 
+Tidak hanya itu, Keverk juga diminta membuat fitur agar client dapat menambah file baru ke dalam server. Direktori FILES memiliki struktur direktori di bawah ini : 
 ### Direktori FILES
 ```
 File1.ekstensi
@@ -39,6 +247,188 @@ Tahun Publikasi:
 Filepath:
 ```
 Kemudian, dari aplikasi client akan dimasukan data buku tersebut (perlu diingat bahwa Filepath ini merupakan path file yang akan dikirim ke server). Lalu client nanti akan melakukan pengiriman file ke aplikasi server dengan menggunakan socket. Ketika file diterima di server, maka row dari files.tsv akan bertambah sesuai dengan data terbaru yang ditambahkan.
+
+#### JAWAB
+Setelah melakukan login, maka akan diberi beberapa pilihan salah satunya adalah add. Ketika memilih add, maka fungsi `add()` akan di jalankan. Fungsi ini akan meminta inputan berupa publisher, tahun dan Filepath sesuai dengan soal yang diatas. Fungsi `take_input()` mengirim format input ke client dan akan mereturn `res_val`. Pada fungsi `OutputCheck()` client untuk mengecek pesan yang dikirim oleh server. Apabila pesan yang dikirim server adalah Filepath: , maka variable `check` akan bernilai true. Ketika user menginput filepath-nya melalui fungsi `CheckInput()`, maka filepath tersebut akan disimpan pada variabel `cmd1`. Setelah server menerima filepath dari user, maka server akan mengambil nama file yang diinputkan dari filepath dan fungsi `CeckNameFile()`. Untuk pengambilan nama file dilakukan dengan cara menyimpan string setelah tanda garis miring terakhir. Setelah server mendapatkan nama file dari inputan user, kemudian nama file akan dicek apakah sudah terdata di file `files.tsv`. Apabila belum terdata, maka server akan memanggil fungsi `downloaded()`, dan mengirimkan pesan `Start to send file`. Pada fungsi `sends()` untuk mengecek ukuran dari file yang akan dikirim ke server dan mengirim ukuran file dengan melalukan perulangan sebanyak file yang akan dikirim. Selanjutnya pada fungsi `INPUTFile()` untuk menerima ukuran file dari client dan akan dilakukan proses transfer file dari user dengan melakukan perulangan sebanyak ukuran file. Selanjutnya adalah mencetak data yang telah diinputkan patda fungsi add ke dalam file `files.tsv`, maka akan dilanjutkan dengan menulis data publisher, tahun, dan filepath pada file `files.tsv`.
+SourceCode fungsi add server:
+```
+void add(char *messages, int ld)
+{
+    char *DIR = "FILES";
+    char publisher[300], year[300], client_path[300];
+    sleep(0.001);
+    if (take_input(ld, "Publisher: ", publisher) == 0) return;
+    if (take_input(ld, "Tahun Publikasi: ", year) == 0) return;
+    if (take_input(ld, "Filepath: ", client_path) == 0) return;
+
+    FILE *file = fopen("files.tsv", "a+");
+    char *fileName = CeckNameFile(client_path);
+
+    if (downloaded(file, fileName)) {
+        send(ld, "file that you uploaded already exists\n", SIZE_BUFFER, 0);
+    } else {
+        send(ld, "Start to send file\n", SIZE_BUFFER, 0);
+        mkdir(DIR, 0777);
+        if (INPUTFile(ld, DIR, fileName) == 0) {
+            fprintf(file, "%s\t%s\t%s\n", client_path, publisher, year);
+            printf("File send successfully\n");
+            runninglog("add", fileName);
+        } else {
+            printf("Error occured when receiving file\n");
+        }
+    }
+    fclose(file);
+}
+```
+SourceCode take_input server:
+```
+int take_input(int ld, char *prompt, char *arah)
+{
+    send(ld, prompt, SIZE_BUFFER, 0);
+    int jumlah, res_val;
+    ioctl(ld, FIONREAD, &jumlah);
+    jumlah /= 300;
+    for (int i = 0; i <= jumlah; i++) {
+        res_val = recv(ld, arah, 300, 0);
+        if (res_val == 0) 
+            return res_val;
+    }
+    while (strcmp(arah, "") == 0) {
+        res_val = recv(ld, arah, 300, 0);
+        if (res_val == 0) return res_val;
+    }
+    printf("Command Client = %s\n", arah);
+    return res_val;
+}
+```
+
+Source code InputCheck client:
+```
+void *InputCheck(void *fdc)
+{
+    int ld;
+    char Input[tool] = {0};
+    chdir("/home/hasna/sisop/praktikum3-1/Client");
+    ld = *(int *) fdc;
+    while (1) {
+        gets(Input);
+        send(ld, Input, maincheck, 0);
+        if (check) {
+            strcpy(cmd1, Input);
+    }
+    }
+}
+```
+Source code OutputCheck client:
+
+```
+void *OutputCheck(void *fdc) 
+{
+    int ld;
+    char Input[tool] = {0};
+    chdir("/home/hasna/sisop/praktikum3-1/Client");
+    ld = *(int *) fdc;
+
+    while (1) 
+    {
+        memset(Input, 0, maincheck);
+        activeserver(ld, Input);
+        printf("%s", Input);
+       	......
+        fflush(stdout);
+    }
+}
+```
+SourceCode CeckNameFile server:
+```
+char *CeckNameFile(char *filePath)
+{
+    char *res = strrchr(filePath, '/');
+    if (res) 
+        return res + 1;
+    else 
+        return filePath;
+}
+```
+SourceCode downloaded server:
+```
+bool downloaded(FILE *file, char *FILENM)
+{
+    char bid[300], *temp1;
+    while (fscanf(file, "%s", bid) != EOF) {
+        temp1 = CeckNameFile(strtok(bid, "\t"));
+        if (strcmp(temp1, FILENM) == 0) 
+            return true;
+    }
+    return false;
+}
+```
+SourceCode sends server:
+```
+int sends(int ld, char *FILENM)
+{
+    char buzz[300] = {0};
+    int res_val;
+    printf("Send File %s ke client\n", FILENM);
+    strcpy(buzz, FILENM);
+    sprintf(FILENM, "FILES/%s", buzz);
+    FILE *file;
+    file = fopen(FILENM, "r");
+
+    if (!file) {
+        printf("File is not found\n");
+        send(ld, "File is not found\n", SIZE_BUFFER, 0);
+        return -1;
+    }
+    send(ld, "Start to receive file\n", SIZE_BUFFER, 0);
+    send(ld, buzz, SIZE_BUFFER, 0);
+
+    fseek(file, 0L, SEEK_END);
+    int size = ftell(file);
+    rewind(file);
+    sprintf(buzz, "%d", size);
+    send(ld, buzz, SIZE_BUFFER, 0);
+
+    while ((res_val = fread(buzz, 1, 300, file)) > 0) {
+        send(ld, buzz, res_val, 0);
+    }
+    recv(ld, buzz, 300, 0);
+    printf("File sent successfully\n");
+    fclose(file);
+    return 0;
+}
+```
+SourceCode fungsi INPUTFile server:
+```
+int INPUTFile(int ld, char *DIRname, char *targetfileN)
+{
+    int res_val, size;
+    char buzz[300] = {0}, in[1];
+
+    res_val = recv(ld, buzz, 300, 0);
+    if (res_val == 0 || strcmp(buzz, "File was found") != 0) {
+        if (res_val == 0) printf("Connection to cilent was disconnect\n");
+        else puts(buzz);
+            return -1;
+    }
+    recv(ld, buzz, SIZE_BUFFER, 0);
+    size = atoi(buzz);
+
+    printf("File sent %s to server\n", targetfileN);
+    sprintf(buzz, "%s/%s", DIRname,targetfileN);
+    FILE *file = fopen(buzz, "w+");
+
+    while (size-- > 0) {
+        if ((res_val = recv(ld, in, 1, 0)) < 0)
+            return res_val;
+            fwrite(in, 1, 1, file);
+    }
+    res_val = 0;
+    printf("File sent successfully to server\n");
+    fclose(file);
+    return res_val;
+}
+```
 
 ## 1D
 Dan client dapat mendownload file yang telah ada dalam folder FILES di server, sehingga sistem harus dapat mengirim file ke client. Server harus melihat dari files.tsv untuk melakukan pengecekan apakah file tersebut valid. Jika tidak valid, maka mengirimkan pesan error balik ke client. Jika berhasil, file akan dikirim dan akan diterima ke client di folder client tersebut. 
@@ -732,5 +1122,3 @@ Fungsi untuk menglist nama path file-file dalam direktori secara rekursif. Perta
 ![enter image description here](Screenshot/3c.png)
 #### 3d
 ![enter image description here](Screenshot/3d.png)
-### Kendala
-Masih belum terbiasa dengan thread, terkadang mendapatkan error segmentation fault.
