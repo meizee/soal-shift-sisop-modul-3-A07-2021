@@ -781,7 +781,11 @@ Struktur Direktori:
             ├── File2.extensi
             └── File1.ekstensi
 ```
-
+### Kendala
+1. Tidak bisa menngunakan multi-connections, hanya single-connections
+2. Segmentations fault(core dumped)
+3. Hanya dapat login satu client, tidak dapat join dengan banyak client.
+4. Kesulitan dalam melakukan transfer file. 
 ## **2.**
  
 ### **2a. Perkalian Matriks**
