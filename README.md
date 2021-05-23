@@ -786,8 +786,23 @@ Struktur Direktori:
 2. Segmentations fault(core dumped)
 3. Hanya dapat login satu client, tidak dapat join dengan banyak client.
 4. Kesulitan dalam melakukan transfer file. 
-## **2.**
- 
+### Screenshot
+#### 1a
+![enter image description here](Screenshot/1a.png)
+#### 1b
+![enter image description here](Screenshot/1b.png)
+#### 1c
+![enter image description here](Screenshot/1c.png)
+#### 1d
+![enter image description here](Screenshot/1d.png)
+ #### 1e
+![enter image description here](Screenshot/1e.png)
+#### 1f
+![enter image description here](Screenshot/1f.png)
+#### 1g
+![enter image description here](Screenshot/1g.png)
+#### 1h
+![enter image description here](Screenshot/1h.png)
 ### **2a. Perkalian Matriks**
 
 > Source Code 
