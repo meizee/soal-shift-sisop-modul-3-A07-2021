@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+// #include <cstring>
 #include <math.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -9,155 +10,156 @@
 #include <pthread.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#define fk 0.001
-#define tool 512-(212*1)
+#define cuk 0.001
+#define gas 512-(212*1)
 
-const int maincheck = sizeof(char) * tool;
-const int sizes = sizeof(int) * tool;
-const int input = sizeof(int)* tool * 1;
-char cmd1[tool];
-bool check = false;
-bool pstn = true;
-bool into = false;
+const int cekisi = sizeof(char) * gas;
+const int ceksize = sizeof(int) * gas;
+const int input = sizeof(int)* gas * 1;
 
-void *InputCheck(void *fdc);
-void *OutputCheck(void *fdc);
-void activeserver(int ld, char *input);
-void sent(int ld);
-void Print(int ld);
-
+//pembuatan socket server
 int create_socket()
 {
-    struct sockaddr_in s_address;
-    int ld = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    int res_val, opt = 1;
+    struct sockaddr_in saddr;
+    int fd, ret_val;
+    int opt = 1;
     struct hostent *local_host; 
-    if (ld == -1) {
+    fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (fd == -1) {
         fprintf(stderr, "socket failed [%s]\n", strerror(errno));
         exit(EXIT_FAILURE);
     }
-    if (setsockopt(ld, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) {
+    if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) {
         perror("setsockopt");
         exit(EXIT_FAILURE);
     }
-    s_address.sin_family = AF_INET;
-    s_address.sin_port = htons(7000);
+    saddr.sin_family = AF_INET;
+    saddr.sin_port = htons(7000);
     local_host = gethostbyname("127.0.0.1");
-    s_address.sin_addr = *((struct in_addr *)local_host->h_addr);
-    res_val = connect(ld, (struct sockaddr *)&s_address, sizeof(struct sockaddr_in));
-    if (res_val == -1) {
+    saddr.sin_addr = *((struct in_addr *)local_host->h_addr);
+    ret_val = connect(fd, (struct sockaddr *)&saddr, sizeof(struct sockaddr_in));
+    if (ret_val == -1) {
         fprintf(stderr, "connect failed [%s]\n", strerror(errno));
         exit(EXIT_FAILURE);
     }
-    return ld;
+    return fd;
 }
-
-void *OutputCheck(void *fdc) 
+char command[gas];
+bool cek = false;
+bool posisi = true;
+bool cuek = false;
+//cek input
+//cek input tersebut sudah oke atau belum
+void *cekinput(void *fdc)
 {
-  
-    int ld;
-    char Input[tool] = {0};
-    chdir("/home/hasna/sisop/praktikum3-1/Client");
-    ld = *(int *) fdc;
+    chdir("/home/fitraharie/soal1/Client");
+    int fd = *(int *) fdc;
+    char message[gas] = {0};
+
+    while (1) {
+        gets(message);
+        send(fd, message, cekisi, 0);
+        if (cek) {
+            strcpy(command, message);
+        }
+    }
+}
+void activeserver(int fd, char *input)
+{
+    if (recv(fd, input, gas, 0) == 0) {
+        printf("Server telah meninggal\n");
+        exit(EXIT_SUCCESS);
+    }
+}
+//cek apakah output tersebut sesuai atau tidak
+void *cekoutput(void *fdc) 
+{
+    //change directory 
+    chdir("/home/fitraharie/soal1/Client");
+    int fd = *(int *) fdc;
+    char message[gas] = {0};
 
     while (1) 
     {
-        memset(Input, 0, maincheck);
-        activeserver(ld, Input);
-        printf("%s", Input);
-        if (strcmp(Input, "Filepath: ") == 0) {
-            check = true;
-        } else if (strcmp(Input, "Start to send file\n") == 0) {
-            sent(ld);
-            check = false;
-        } else if (strcmp(Input, "file that you uploaded already exists\n") == 0) {
-            check = false;
-        } else if (strcmp(Input, "Start to send file\n") == 0) {
-            Print(ld);
+        //set pesan menjadi nol
+        memset(message, 0, cekisi);
+        activeserver(fd, message);
+        printf("%s", message);
+        //pindahkan path
+        if (strcmp(message, "Filepath: ") == 0) {
+            cek = true;
+        } else if (strcmp(message, "Memulai mengirimkan file\n") == 0) {
+            kirim(fd);
+            cek = false;
+        } else if (strcmp(message, "File yang anda upload sudah ada\n") == 0) {
+            cek = false;
+        } else if (strcmp(message, "Memulai menerima file\n") == 0) {
+            cetak(fd);
         } 
         fflush(stdout);
     }
 }
+//send file dari client to server
+void kirim(int fd)
+{
+    //jangan lupa send pesan
+    printf("Mengirimkan file %s ke server\n", command);
+    int ret_val;
+    FILE *sends = fopen(command, "r");
+    char buf[gas] = {0};
 
-void *InputCheck(void *fdc)
-{
-    int ld;
-    char Input[tool] = {0};
-    chdir("/home/hasna/sisop/praktikum3-1/Client");
-    ld = *(int *) fdc;
-    while (1) {
-        gets(Input);
-        send(ld, Input, maincheck, 0);
-        if (check) {
-            strcpy(cmd1, Input);
-    }
-    }
-}
-void activeserver(int ld, char *input)
-{
-    if (recv(ld, input, tool, 0) == 0) {
-        printf("The server has expired\n");
-        exit(EXIT_SUCCESS);
-    }
-}
-
-void sent(int ld)
-{
-    
-    int res_val;
-    FILE *sends;
-    char buf[tool] = {0};
-    printf("Send file %s to server\n", cmd1);
-    sends = fopen(cmd1, "r");
-   
     if (sends) {
-         int sizess;
-        send(ld, "Files found", maincheck, 0);
+        //file ditemukan
+        send(fd, "File ditemukan", cekisi, 0);
         fseek(sends, 0L, SEEK_END);
-        sizess = ftell(sends);
+        int size = ftell(sends);
         rewind(sends);
-        sprintf(buf, "%d", sizess);
-        send(ld, buf, maincheck, 0);
-        while ((res_val = fread(buf, 1, 1, sends)) > 0) 
+        sprintf(buf, "%d", size);
+        send(fd, buf, cekisi, 0);
+        while ((ret_val = fread(buf, 1, 1, sends)) > 0) 
         {
-            send(ld, buf, 1, 0);
+            send(fd, buf, 1, 0);
         } 
-        printf("File has been sent\n");
+        printf("File telah dikirimkan\n");
         fclose(sends);
     } 
     else 
     {
-        printf("File is not found\n");
-        send(ld, "File is not found", maincheck, 0);
+        printf("File tidak ada\n");
+        send(fd, "File tidak ada", cekisi, 0);
     }
 }
 
-void Print(int ld)
+void cetak(int fd)
 {
-    char buff[tool] = {0};
-    int res_val, sizess;
-    FILE *sends;
-    recv(ld, buff, tool, 0);
-    res_val = recv(ld, buff, tool, 0);
-    sizess = atoi(buff);
-    sends = fopen(buff, "w+");
-    while (sizess > 0) {
-        res_val = recv(ld, buff, tool, 0);
-        fwrite(buff, 1, res_val, sends);
-        memset(buff, 0, maincheck);
-        sizess -= res_val;
+    char buff[gas] = {0};
+    int ret_val = recv(fd, buff, gas, 0);
+    FILE *sends = fopen(buff, "w+");
+    recv(fd, buff, gas, 0);
+    int size = atoi(buff);
+    while (size > 0) {
+        ret_val = recv(fd, buff, gas, 0);
+        //write 
+        fwrite(buff, 1, ret_val, sends);
+        memset(buff, 0, cekisi);
+        size -= ret_val;
     }
-    puts("File sent successfully to server");
-    send(ld, "File has been sent", maincheck, 0);
+    //masukkan ke client
+    puts("File berhasil dikirimkan ke server");
+    //send to server
+    send(fd, "File berhasil dikirimkan", cekisi, 0);
     fclose(sends);
 }
-
 int main(int argc, char const *argv[])
 {
     pthread_t tid[2];
     int fdc = create_socket();
-    pthread_create(&(tid[0]), NULL, &Output, (void *) &client_fd);
-    pthread_create(&(tid[1]), NULL, &InputCheck, (void *) &fdc);
+    //bisa menghandle client banyak
+    //minta masukka username
+    pthread_create(&(tid[0]), NULL, &cekoutput, (void *) &fdc);
+    //minta masukkan email
+    pthread_create(&(tid[1]), NULL, &cekinput, (void *) &fdc);
+    //joinkan
     pthread_join(tid[0], NULL);
     pthread_join(tid[1], NULL);
     close(fdc);
