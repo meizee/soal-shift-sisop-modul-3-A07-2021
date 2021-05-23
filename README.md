@@ -732,3 +732,5 @@ Fungsi untuk menglist nama path file-file dalam direktori secara rekursif. Perta
 ![enter image description here](Screenshot/3c.png)
 #### 3d
 ![enter image description here](Screenshot/3d.png)
+### Kendala
+Masih belum terbiasa dengan thread, terkadang mendapatkan error segmentation fault.
