@@ -437,6 +437,69 @@ Contoh Command client
 ```
 download TEMPfile.pdf
 ```
+#### JAWAB
+Ketika sudah melakukan login, dan menginputkan download, maka fungsi `download()` akan terpanggil. Pertama, mengecek apakah file yang akan didownload telah terdaftar pada file `files.ts` dengan memanggil fungsi `downloaded()`. Apabila file terdapat pada file tersebut maka akan memanggil fungsi `send()`. Jika file yang akan didownload pada file tersebut tidak ada maka akan mereturn `File is not found`. Pada fungsi `sends()`, pertama membuat filepath yaitu `FILES/<nama file>` dan mengecek apakah fungsi valid atau tidak.
+SourceCode download server:
+```
+void download(char *FILENM, int ld)
+{
+    FILE *file = fopen("files.tsv", "a+");
+    if (downloaded(file, FILENM)) {
+        sends(ld, FILENM);
+    } else {
+        send(ld, "File is not found\n", SIZE_BUFFER, 0);
+    }
+    fclose(file);
+}
+```
+SourceCode sends server:
+```
+int sends(int ld, char *FILENM)
+{
+    char buzz[300] = {0};
+    int res_val;
+    printf("Send File %s ke client\n", FILENM);
+    strcpy(buzz, FILENM);
+    sprintf(FILENM, "FILES/%s", buzz);
+    FILE *file;
+    file = fopen(FILENM, "r");
+
+    if (!file) {
+        printf("File is not found\n");
+        send(ld, "File is not found\n", SIZE_BUFFER, 0);
+        return -1;
+    }
+    send(ld, "Start to receive file\n", SIZE_BUFFER, 0);
+    send(ld, buzz, SIZE_BUFFER, 0);
+
+    fseek(file, 0L, SEEK_END);
+    int size = ftell(file);
+    rewind(file);
+    sprintf(buzz, "%d", size);
+    send(ld, buzz, SIZE_BUFFER, 0);
+
+    while ((res_val = fread(buzz, 1, 300, file)) > 0) {
+        send(ld, buzz, res_val, 0);
+    }
+    recv(ld, buzz, 300, 0);
+    printf("File sent successfully\n");
+    fclose(file);
+    return 0;
+}
+```
+SourceCode downloaded server:
+```
+bool downloaded(FILE *file, char *FILENM)
+{
+    char bid[300], *temp1;
+    while (fscanf(file, "%s", bid) != EOF) {
+        temp1 = CeckNameFile(strtok(bid, "\t"));
+        if (strcmp(temp1, FILENM) == 0) 
+            return true;
+    }
+    return false;
+}
+```
 ## 1E
 Setelah itu, client juga dapat menghapus file yang tersimpan di server. Akan tetapi, Keverk takut file yang dibuang adalah file yang penting, maka file hanya akan diganti namanya menjadi ‘old-NamaFile.ekstensi’. Ketika file telah diubah namanya, maka row dari file tersebut di file.tsv akan terhapus.
 
@@ -444,6 +507,58 @@ Contoh Command Client:
 ```
 delete TEMPfile.pdf
 ```
+#### JAWAB
+Setelah login dan kemudian menginpunkan delete, maka akan memanggil fungsi `delete()`. Sebelum bisa mendelete file maka inputkan file yang akan di delete harus sesuai dan terdata pada di `files.tsv`. Fungsi ini, akan mengecek file yang akan dihapus ada atau tidak di file `files.tsv` dengan memanggil fungsi `downloaded()`. Apabila file tersebut ada pada `files.tsv`, maka setiap data di files.tsv dipindahkan ke file `temp.tsv` dan sambil melakukan pengecekkan nama file. Apabila nama file pada` files.tsv` sama dengan file yang ingin dihapus, maka data tersebut tidak perlu dipindahkan ke `temp.tsv`. Apabila semua data telah dipindahkan, hapus `files.tsv` dan ubah nama `temp.tsv` menjadi `files.tsv`. Kemudian, ubah nama file pada folder `FILES` dengan cara menyimpan nama baru dan nama lama, lalu panggil fungsi `rename()`.
+SourceCode delete server:
+```
+void delete(char *FILENM, int ld)
+{
+    //buka file
+    FILE *file = fopen("files.tsv", "a+");
+    char bid[300], currFilePath[300], publisher[300], year[300];
+    if (downloaded(file, FILENM)) {
+        rewind(file);
+        FILE *tmp_fp = fopen("temp.tsv", "a+");
+        //buat sebuah temp supaya pada saat pertukaran data tidak berubah2
+        while (fgets(bid, SIZE_BUFFER, file)) {
+            sscanf(bid, "%s\t%s\t%s", currFilePath, publisher, year);
+            if (strcmp(CeckNameFile(currFilePath), FILENM) != 0) { 
+                fprintf(tmp_fp, "%s", bid);
+            }
+            memset(bid, 0, SIZE_BUFFER);
+        }
+        fclose(tmp_fp);
+        fclose(file);
+        remove("files.tsv");
+        rename("temp.tsv", "files.tsv");
+        char deletedFileName[300];
+        sprintf(deletedFileName, "FILES/%s", FILENM);
+        char newFileName[300];
+        sprintf(newFileName, "FILES/old-%s", FILENM);
+        rename(deletedFileName, newFileName);
+        send(ld, "This file was successfully deleted\n", SIZE_BUFFER, 0);
+        runninglog("delete", FILENM);
+    } 
+    else {
+        send(ld, "File failed to download\n", SIZE_BUFFER, 0);
+        fclose(file);
+    }
+}
+```
+SourceCode downloaded server:
+```
+bool downloaded(FILE *file, char *FILENM)
+{
+    char bid[300], *temp1;
+    while (fscanf(file, "%s", bid) != EOF) {
+        temp1 = CeckNameFile(strtok(bid, "\t"));
+        if (strcmp(temp1, FILENM) == 0) 
+            return true;
+    }
+    return false;
+}
+```
+
 ## 1F
 Client dapat melihat semua isi files.tsv dengan memanggil suatu perintah yang bernama see. Output dari perintah tersebut keluar dengan format. 
 Contoh Command Client :
@@ -465,11 +580,125 @@ Tahun publishing:
 Ekstensi File : 
 Filepath : 
 ```
+#### JAWAB
+Apabila user telah melakukan login dan  memilih menu see, maka fungsi `see()` akan dijalankan dan mengecek apakah file yang kita inputan terdapat pada `files.tsv`. Kemudian memanggil fungsi `dividingfile()` untuk membagi nama file dan eksistensi pada setiap filepath pada `files.tsv`. Ekstensi yag diambil dari string yaitu setelah tanda titik pada filepath. Kemudian, fungsi ini akan memanggil fungsi `CeckNameFile()`. Fungsi ini digunakan untuk mendapatkan nama file dan ekstensi dan string sebelum tanda titik supaya file mendapatkan nama saja. Kembali pada fungsi `see()` akan mencetak semua data sesuai dengan format diatas dan mengirimnya ke client. Setelah proses pengecekkan data selesai, dilanjutkan dengan mengecek apakah data ditemukan atau tidak.
+SourceCode fungsi see server:
+```
+void see(char *buzz, int ld, bool isFind)
+{
+    int tambah = 0;
+    FILE *src = fopen("files.tsv", "r");
+    if (!src) {
+        write(ld, "Files.tsv not found\n", SIZE_BUFFER);
+        return;
+    }
+
+    char temp[300 + 85], nameFILE[300/3], ext[5],
+        FileP[300/3], publisher[300/3], year[10];
+        
+    while (fscanf(src, "%s\t%s\t%s", FileP, publisher, year) != EOF) {
+        dividingfile(FileP, nameFILE, ext);
+        if (isFind && strstr(nameFILE, buzz) == NULL) continue;
+        tambah++;
+
+        sprintf(temp, 
+            "Nama: %s\nPublisher: %s\nTahun publishing: %s\nEkstensi File: %s\nFilepath: %s\n\n",
+            nameFILE, publisher, year, ext, FileP
+        );
+        write(ld, temp, SIZE_BUFFER);
+        sleep(0.001);
+    }
+    if(tambah == 0) {
+        if (isFind) write(ld, "the command is not found in files.tsv\n", SIZE_BUFFER);
+        else write(ld, "Data is not found in database files.tsv\n", SIZE_BUFFER);
+    } 
+    fclose(src);
+}
+```
+SourceCode fungsi dividingfile server:
+```
+void dividingfile(char *FileP, char *nameFILE, char *ext)
+{
+    char *temp;
+    if (temp = strrchr(FileP, '.')) strcpy(ext, temp + 1);
+    else strcpy(ext, "-");
+    strcpy(nameFILE, CeckNameFile(FileP));
+    strtok(nameFILE, ".");
+}
+```
+SourceCode CeckNameFile server:
+```
+char *CeckNameFile(char *filePath)
+{
+    char *res = strrchr(filePath, '/');
+    if (res) 
+        return res + 1;
+    else 
+        return filePath;
+}
+```
 ## 1G
 Aplikasi client juga dapat melakukan pencarian dengan memberikan suatu string. Hasilnya adalah semua nama file yang mengandung string tersebut. Format output seperti format output f.
 Contoh Client Command:
 ```
 find TEMP
+```
+#### JAWAB
+Apabila user telah melakukan login dan  memilih menu find sesuai dengan data, maka pertama adalah memanggil fungsi `see()`, pertama untuk mengecek apakah format sesuai dengan data yang terdapat pada `files.tsv`. Apabila data yang dicari terdapat pada file tersebut, maka dilakukan looping dari baris awal hingga akhir dari `files.tsv` yang ada.  Kemudian memanggil fungsi `dividingfile()` untuk membagi nama file dan eksistensi pada setiap filepath pada `files.tsv`. kstensi yag diambil dari string yaitu setelah tanda titik pada filepath. Kemudian, fungsi ini akan memanggil fungsi `CeckNameFile()`. Fungsi ini digunakan untuk mendapatkan nama file dan ekstensi dan string sebelum tanda titik supaya file mendapatkan nama saja. Kembali ke fungsi see(), untuk mengecek apakah string yang dikirim ke server terdapat pada nama file yang ditunjuk. Apabila tidak ada data yang diinginkan, maka file tersebut akan dilewati. Kemudian proses dilanjutkan dengan menulis semua data sesuai format dan mengirimnya ke client. Setelah proses pengecekkan data selesai, dilanjutkan dengan mengecek apakah data ditemukan atau tidak.
+SourceCode fungsi see server:
+```
+void see(char *buzz, int ld, bool isFind)
+{
+    int tambah = 0;
+    FILE *src = fopen("files.tsv", "r");
+    if (!src) {
+        write(ld, "Files.tsv not found\n", SIZE_BUFFER);
+        return;
+    }
+
+    char temp[300 + 85], nameFILE[300/3], ext[5],
+        FileP[300/3], publisher[300/3], year[10];
+        
+    while (fscanf(src, "%s\t%s\t%s", FileP, publisher, year) != EOF) {
+        dividingfile(FileP, nameFILE, ext);
+        if (isFind && strstr(nameFILE, buzz) == NULL) continue;
+        tambah++;
+
+        sprintf(temp, 
+            "Nama: %s\nPublisher: %s\nTahun publishing: %s\nEkstensi File: %s\nFilepath: %s\n\n",
+            nameFILE, publisher, year, ext, FileP
+        );
+        write(ld, temp, SIZE_BUFFER);
+        sleep(0.001);
+    }
+    if(tambah == 0) {
+        if (isFind) write(ld, "the command is not found in files.tsv\n", SIZE_BUFFER);
+        else write(ld, "Data is not found in database files.tsv\n", SIZE_BUFFER);
+    } 
+    fclose(src);
+}
+```
+SourceCode fungsi dividingfile server:
+```
+void dividingfile(char *FileP, char *nameFILE, char *ext)
+{
+    char *temp;
+    if (temp = strrchr(FileP, '.')) strcpy(ext, temp + 1);
+    else strcpy(ext, "-");
+    strcpy(nameFILE, CeckNameFile(FileP));
+    strtok(nameFILE, ".");
+}
+```
+SourceCode CeckNameFile server:
+```
+char *CeckNameFile(char *filePath)
+{
+    char *res = strrchr(filePath, '/');
+    if (res) 
+        return res + 1;
+    else 
+        return filePath;
+}
 ```
 ## 1H
 Dikarenakan Keverk waspada dengan pertambahan dan penghapusan file di server, maka Keverk membuat suatu log untuk server yang bernama running.log. Contoh isi dari log ini adalah
@@ -478,6 +707,65 @@ Dikarenakan Keverk waspada dengan pertambahan dan penghapusan file di server, ma
 Tambah : File1.ektensi (id:pass)
 Hapus : File2.ektensi (id:pass)
 ```
+#### JAWAB
+Pertama adalah membuat fungsi `runninglog()` untuk mengecek apakah ada `add` atau 1`delete` data ketika menjalankan program. Kemudian panggil fungsi `runninglog()` pada bagian akhir dari fungsi add() dan delete() ketika proses add dan delete file berhasil.
+SourceCode fungsi runninglog server:
+```
+void runninglog(char *command, char *FILENM)
+{
+    FILE *file;
+    file = fopen("running.log", "a+");
+    command = (strcmp(command, "add") == 0) ? "Tambah" : "Hapus";
+    fprintf(file, "%s : %s (%s:%s)\n", command, FILENM, validator[0], validator[1]);
+    fclose(file);
+}
+```
+SourceCode fungsi add server:
+```
+void add(char *messages, int ld)
+{
+    char *DIR = "FILES";
+    char publisher[300], year[300], client_path[300];
+    sleep(0.001);
+    if (take_input(ld, "Publisher: ", publisher) == 0) return;
+    if (take_input(ld, "Tahun Publikasi: ", year) == 0) return;
+    if (take_input(ld, "Filepath: ", client_path) == 0) return;
+
+    FILE *file = fopen("files.tsv", "a+");
+    char *fileName = CeckNameFile(client_path);
+
+    if (downloaded(file, fileName)) {
+        send(ld, "file that you uploaded already exists\n", SIZE_BUFFER, 0);
+    } else {
+       	    ...
+            runninglog("add", fileName);
+        } else {
+            printf("Error occured when receiving file\n");
+        }
+    }
+    fclose(file);
+}
+```
+SourceCode delete server:
+```
+void delete(char *FILENM, int ld)
+{
+    //buka file
+    FILE *file = fopen("files.tsv", "a+");
+    char bid[300], currFilePath[300], publisher[300], year[300];
+    if (downloaded(file, FILENM)) {
+        ...
+        send(ld, "This file was successfully deleted\n", SIZE_BUFFER, 0);
+        runninglog("delete", FILENM);
+    } 
+    else {
+        send(ld, "File failed to download\n", SIZE_BUFFER, 0);
+        fclose(file);
+    }
+}
+```
+
+
 Struktur Direktori:
 ```
 ├── Client
