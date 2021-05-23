@@ -323,6 +323,7 @@ void runninglog(char *cmd, char *filename)
 ![enter image description here](Screenshot/1g.png)
 #### 1h
 ![enter image description here](Screenshot/1h.png)
+## Soal 2
 ### **2a. Perkalian Matriks**
 
 > Source Code 
