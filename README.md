@@ -1161,6 +1161,10 @@ else{
 #### **Screenshot:**
 ![2c](Screenshot/2c.jpg)
 
+### **Kendala**
+1. Tidak bisa melakukan passing variable saat membuat thread, sehingga saya gunakan global variabel pada fungsi `mult_matrix`
+2. Sempat mengalami overflow pada test case yang diujikan saat demo karena menggunakan tipe data `int`, solusinya dengan mengubah tipe data pada matriks menjadi `long long int`
+
 
 
 
