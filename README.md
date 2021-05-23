@@ -8,6 +8,7 @@ Soal Shift Modul 3 |  Sistem Operasi 2021
 
 ## SOAL NO 1
 ### 1A
+Sistem dapat menggunakan multi-connections.
 
 Pada saat penggunaan yang menginginkan multi-connections maka kita membutuhkan thread sebagai alat untuk melakukan aktifitas tersebut. Oleh karena itu disini dibuat dua buah thread untuk mengakomodasi hal tersebut untuk menyimpan username dan password. 
 
